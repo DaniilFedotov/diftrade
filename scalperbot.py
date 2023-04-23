@@ -14,17 +14,38 @@ load_dotenv()
 
 
 VERSIONS = ['Trader', 'Scalper', 'Smart']
-TRADER_VERSION = VERSIONS[1] # Выбрать версию бота
-BINANCE_TOKEN = os.getenv('BINANCE_TOKEN')
-TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
-TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
-
-TIME_STEP_CHECK = 1 # Выбрать частоту проверки в состоянии сделки
-TIME_STEP_TGBOT = 20 # Выбрать частоту проверки в состоянии ожидания сделки
+VERSION = VERSIONS[1] # Выбрать версию бота
+COEF = {VERSIONS[0]: {'SEARCH_TIME': 20,
+                      'CHECK_TIME': 6,
+                      'SLOW_CHECK_TIME': 60,
+                      'INLET': 0.9995,
+                      'OUTLET': 1.0005,
+                      'STOP': 0.98,
+                      },
+        VERSIONS[1]: {'SEARCH_TIME': 3,
+                      'CHECK_TIME': 3,
+                      'SLOW_CHECK_TIME': 30,
+                      'INLET': 5,
+                      'OUTLET': 1.0002,
+                      'STOP': 0.985,
+                      },
+        VERSIONS[2]: {'SEARCH_TIME': 15,
+                      'CHECK_TIME': 3,
+                      'SLOW_CHECK_TIME': 30,
+                      'INLET': 0.9995,
+                      'OUTLET': 1.0003,
+                      'STOP': 0.985,
+                      },
+        }
 TEST_DEPO = {
     'USDT_DEPO': 100.0,
     'BTC_DEPO': 0.0,
 }
+
+BINANCE_TOKEN = os.getenv('BINANCE_TOKEN')
+TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')
+TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')
+
 BASE_URL = 'https://api.binance.com'
 ENDPOINT = '/api/v3/'
 ENDPOINT_FUNC = 'ticker/price'
@@ -33,7 +54,7 @@ HEADERS = {"Authorization": f"OAuth {BINANCE_TOKEN}"}
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 handler = logging.StreamHandler(stream=sys.stdout)
-file_handler = logging.FileHandler(f"log_{TRADER_VERSION}.log", mode='a')
+file_handler = logging.FileHandler(f"log_{VERSION}.log", mode='a')
 formatter = logging.Formatter("%(asctime)s - %(levelname)s - %(message)s")
 handler.setFormatter(formatter)
 logger.addHandler(handler)
@@ -43,36 +64,63 @@ updater = Updater(token=TELEGRAM_TOKEN)
 
 
 def sleep(update, context):
+    """Отправляет бота в спячку."""
     chat = update.effective_chat
     context.bot.send_message(chat_id=chat.id,
-                             text=f'Мяу! Пока! {TRADER_VERSION} ушел.')
+                             text=f'Мяу! Пока! {VERSION} ушел.')
     sys.exit()
 
 
 def check_deposit_account():
-    logger.debug(f'{TRADER_VERSION}: Получен состав кошелька')
+    """Проверяет активы на кошельке."""
+    logger.debug(f'{VERSION}: Получен состав кошелька')
     return TEST_DEPO
 
 
 def check_price():
+    """Проверяет цену монеты."""
     r = requests.get(f'{BASE_URL}{ENDPOINT}{ENDPOINT_FUNC}?symbol=BTCUSDT')
-    logger.debug(f'{TRADER_VERSION}: Цена проверена: '
+    logger.debug(f'{VERSION}: Цена проверена: '
                  f'{float(r.json()["price"])} USDT')
     return float(r.json()["price"])
 
 
-def hash(hash_list, current_price):
-    new_hash_list = []
-    for i in range(1, 5):
-        new_hash_list.append(hash_list[i])
-    new_hash_list.append(current_price)
-    return new_hash_list
+def check_level(cache_list, current_price):
+    """Проверяет, находится ли цена в допустимом для входа диапазоне."""
+    width = max(cache_list) - min(cache_list)
+    if min(cache_list) + 0.1 * width < current_price < max(cache_list) - 0.3 * width:
+        return True
+    return False
+
+
+def get_timer(current_price, purchase_price):
+    """Определяет время следующего запроса к API в зависимости
+     от положения текущей цены относительно цены покупки.
+     """
+    if abs(purchase_price - current_price) >= current_price * 0.003:
+        return COEF[VERSION]['SLOW_CHECK_TIME']
+    return COEF[VERSION]['CHECK_TIME']
+
+
+def cache(cache_list, current_price, size):
+    """Создает кэш, размер которого задан параметром size,
+    определяемым длиной кэшируемого участка на временном графике.
+    """
+    if len(cache_list) == int(size):
+        new_cache_list = []
+        for i in range(1, size):
+            new_cache_list.append(cache_list[i])
+        new_cache_list.append(current_price)
+        return new_cache_list
+    cache_list.append(current_price)
+    return cache_list
 
 
 def buy_coin(deposit_info, current_price):
+    """Приобретает монеты по заданной цене."""
     quantity = deposit_info['USDT_DEPO'] / current_price
     dt = datetime.datetime.now()
-    logger.debug(f'{TRADER_VERSION}: Куплено {quantity} BTC на сумму '
+    logger.debug(f'{VERSION}: Куплено {quantity} BTC на сумму '
                  f'{quantity * current_price} USDT по цене {current_price}')
     deal_info = {
         'in_deal': True,
@@ -86,11 +134,12 @@ def buy_coin(deposit_info, current_price):
 
 
 def sell_coin(deposit_info, current_price, deal_info):
+    """Продает монеты по заданной цене."""
     quantity = deal_info['quantity']
     dt = datetime.datetime.now()
     profit = (quantity * current_price -
               deal_info['quantity'] * deal_info['purchase_price'])
-    logger.debug(f'{TRADER_VERSION}: Продано {quantity} BTC на сумму '
+    logger.debug(f'{VERSION}: Продано {quantity} BTC на сумму '
                  f'{quantity * current_price} USDT по цене {current_price}')
     deal_info = {
         'in_deal': False,
@@ -116,26 +165,40 @@ def send_message(bot, message):
 def main():
     """Основная логика работы бота."""
     bot = Bot(token=TELEGRAM_TOKEN)
+    cache_level = []
     deposit_info = check_deposit_account()
     while True:
         current_price = check_price()
-        random_inlet = randint(1, 5)
-        if random_inlet == 5:
+        random_inlet = randint(1, int(COEF[VERSION]['INLET']))
+        cache_level = cache(cache_level, current_price, 30 * 60 / COEF[VERSION]['SEARCH_TIME'])
+        level_factor = check_level(cache_level, current_price)
+        print(random_inlet, level_factor)
+        if random_inlet == int(COEF[VERSION]['INLET']) and level_factor:
             deal_info, deposit_info = buy_coin(deposit_info, current_price)
             while deal_info['in_deal']:
                 current_price = check_price()
-                if current_price >= deal_info['purchase_price'] * 1.0002:
+                cache_level = cache(cache_level, current_price, 30 * 60 / COEF[VERSION]['SEARCH_TIME'])
+                if current_price <= deal_info['purchase_price'] * COEF[VERSION]['STOP']:
                     deal_info, deposit_info = sell_coin(
                         deposit_info,
                         current_price,
                         deal_info)
-                time.sleep(TIME_STEP_CHECK)
-            message = (f'{TRADER_VERSION}: Сделка закрыта, зароботок: '
+                    message = f'{VERSION}: Вылетел по стопу'
+                    logger.debug(message)
+                    send_message(bot, message)
+                if current_price >= deal_info['purchase_price'] * COEF[VERSION]['OUTLET']:
+                    deal_info, deposit_info = sell_coin(
+                        deposit_info,
+                        current_price,
+                        deal_info)
+                timer = get_timer(current_price, deal_info['purchase_price'])
+                time.sleep(timer)
+            message = (f'{VERSION}: Сделка закрыта, зароботок: '
                        f'{deal_info["profit"]} USDT '
                        f'Текущий депозит: {deposit_info["USDT_DEPO"]} USDT')
             logger.debug(message)
             send_message(bot, message)
-        time.sleep(TIME_STEP_TGBOT)
+        time.sleep(COEF[VERSION]['SEARCH_TIME'])
 
 
 if __name__ == "__main__":
