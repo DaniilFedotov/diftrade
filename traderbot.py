@@ -24,7 +24,7 @@ COEF = {VERSIONS[0]: {'SEARCH_TIME': 20,
         VERSIONS[1]: {'SEARCH_TIME': 15,
                       'CHECK_TIME': 3,
                       'SLOW_CHECK_TIME': 30,
-                      'INLET': None,
+                      'INLET': 5,
                       'OUTLET': 1.0002,
                       'STOP': 0.985,
                       },
@@ -101,13 +101,22 @@ def get_timer(current_price, purchase_price):
     return COEF[VERSION]['CHECK_TIME']
 
 
+def setup_cache(cache_level):
+    """Производит заполнение кэша для создания первоначальных уровней."""
+    while len(cache_level) < 5 * 60 / COEF[VERSION]['SEARCH_TIME']:
+        current_price = check_price()
+        cache_level = cache(cache_level, current_price, 120 * 60 / COEF[VERSION]['CHECK_TIME'])
+        time.sleep(COEF[VERSION]['SEARCH_TIME'])
+    return cache_level
+
+
 def cache(cache_list, current_price, size):
     """Создает кэш, размер которого задан параметром size,
     определяемым длиной кэшируемого участка на временном графике.
     """
     if len(cache_list) == int(size):
         new_cache_list = []
-        for i in range(1, size):
+        for i in range(1, int(size)):
             new_cache_list.append(cache_list[i])
         new_cache_list.append(current_price)
         return new_cache_list
@@ -164,20 +173,20 @@ def send_message(bot, message):
 def main():
     """Основная логика работы бота."""
     bot = Bot(token=TELEGRAM_TOKEN)
-    cache_inlet = []
-    cache_level = []
+    cache_inlet = setup_cache([])
+    cache_level = setup_cache([])
     deposit_info = check_deposit_account()
     while True:
         current_price = check_price()
         cache_inlet = cache(cache_inlet, current_price, 5 * 60 / COEF[VERSION]['SEARCH_TIME'])
-        cache_level = cache(cache_level, current_price, 30 * 60 / COEF[VERSION]['SEARCH_TIME'])
+        cache_level = cache(cache_level, current_price, 120 * 60 / COEF[VERSION]['CHECK_TIME'])
         level_factor = check_level(cache_level, current_price)
         if current_price <= max(cache_inlet) * COEF[VERSION]['INLET'] and level_factor:
             deal_info, deposit_info = buy_coin(deposit_info, current_price)
             while deal_info['in_deal']:
                 current_price = check_price()
-                cache_level = cache(cache_level, current_price, 30 * 60 / COEF[VERSION]['SEARCH_TIME'])
-                if current_price <= deal_info['purchase_price'] * COEF[VERSION]['STOP']:
+                cache_level = cache(cache_level, current_price, 120 * 60 / COEF[VERSION]['CHECK_TIME'])
+                if current_price < deal_info['purchase_price'] * COEF[VERSION]['STOP']:
                     deal_info, deposit_info = sell_coin(
                         deposit_info,
                         current_price,
@@ -185,19 +194,20 @@ def main():
                     message = f'{VERSION}: Вылетел по стопу'
                     logger.debug(message)
                     send_message(bot, message)
-                if current_price >= deal_info['purchase_price'] * COEF[VERSION]['OUTLET']:
+                elif current_price >= deal_info['purchase_price'] * COEF[VERSION]['OUTLET']:
                     deal_info, deposit_info = sell_coin(
                         deposit_info,
                         current_price,
                         deal_info)
-                timer = get_timer(current_price, deal_info['purchase_price'])
-                time.sleep(timer)
+                else:
+                    timer = get_timer(current_price, deal_info['purchase_price'])
+                    time.sleep(timer)
             message = (f'{VERSION}: Сделка закрыта, зароботок: '
                        f'{deal_info["profit"]} USDT '
                        f'Текущий депозит: {deposit_info["USDT_DEPO"]} USDT')
             logger.debug(message)
             send_message(bot, message)
-            cache_inlet = [deal_info['selling_price']]
+            cache_inlet = cache_level
         time.sleep(COEF[VERSION]['SEARCH_TIME'])
 
 
