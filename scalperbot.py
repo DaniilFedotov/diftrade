@@ -46,9 +46,9 @@ updater = Updater(token=TELEGRAM_TOKEN)
 
 def main():
     """Основная логика работы бота."""
+    deposit_info = check_deposit_account(VERSION)
     bot = Bot(token=TELEGRAM_TOKEN)
     cache_level = setup_cache([], VERSION)
-    deposit_info = check_deposit_account(VERSION)
     while True:
         current_price = check_price(VERSION)
         random_inlet = randint(1, int(COEF[VERSION]['INLET']))

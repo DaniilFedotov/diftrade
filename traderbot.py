@@ -89,7 +89,7 @@ def check_level(cache_list, current_price, version):
     """Проверяет, находится ли цена в допустимом для входа диапазоне."""
     logger.debug(f'{version}: Проверены уровни для входа')
     width = max(cache_list) - min(cache_list)
-    if min(cache_list) + 0.1 * width < current_price < max(cache_list) - 0.3 * width:
+    if min(cache_list) + 0.1 * width < current_price < max(cache_list) - 0.2 * width:
         return True
     return False
 
@@ -183,9 +183,9 @@ def send_message(bot, message):
 def main():
     """Основная логика работы бота."""
     bot = Bot(token=TELEGRAM_TOKEN)
+    deposit_info = check_deposit_account(VERSION)
     cache_inlet = setup_cache([], VERSION)
     cache_level = setup_cache([], VERSION)
-    deposit_info = check_deposit_account(VERSION)
     while True:
         current_price = check_price(VERSION)
         cache_inlet = cache(cache_inlet, current_price, 5 * 60 / COEF[VERSION]['SEARCH_TIME'], VERSION)
