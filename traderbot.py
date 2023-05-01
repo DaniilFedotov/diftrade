@@ -17,23 +17,23 @@ VERSION = VERSIONS[0]  # Выбрать версию бота
 COEF = {VERSIONS[0]: {'SEARCH_TIME': 20,
                       'CHECK_TIME': 6,
                       'SLOW_CHECK_TIME': 60,
-                      'INLET': 0.9995,
-                      'OUTLET': 1.0005,
+                      'INLET': 0.9992,
+                      'OUTLET': 1.0008,
                       'STOP': 0.98,
                       },
         VERSIONS[1]: {'SEARCH_TIME': 15,
                       'CHECK_TIME': 3,
                       'SLOW_CHECK_TIME': 30,
                       'INLET': 5,
-                      'OUTLET': 1.0002,
+                      'OUTLET': 1.0004,
                       'STOP': 0.985,
                       },
-        VERSIONS[2]: {'SEARCH_TIME': 15,
-                      'CHECK_TIME': 3,
+        VERSIONS[2]: {'SEARCH_TIME': 30,
+                      'CHECK_TIME': 5,
                       'SLOW_CHECK_TIME': 30,
-                      'INLET': 0.9995,
-                      'OUTLET': 1.0003,
-                      'STOP': 0.985,
+                      'INLET': 0.9990,
+                      'OUTLET': 1.0025,
+                      'STOP': 0.98,
                       },
         }
 TEST_DEPO = {
@@ -77,19 +77,25 @@ def check_deposit_account(version):
     return TEST_DEPO
 
 
-def check_price(version):
+def check_price(version, bot):
     """Проверяет цену монеты."""
-    r = requests.get(f'{BASE_URL}{ENDPOINT}{ENDPOINT_FUNC}?symbol=BTCUSDT')
-    logger.debug(f'{version}: Цена проверена: '
-                 f'{float(r.json()["price"])} USDT')
-    return float(r.json()["price"])
+    try:
+        r = requests.get(f'{BASE_URL}{ENDPOINT}{ENDPOINT_FUNC}?symbol=BTCUSDT')
+        logger.debug(f'{version}: Цена проверена: '
+                     f'{float(r.json()["price"])} USDT')
+        return float(r.json()["price"])
+    except Exception as error:
+        message = f'Ошибка при проверке цены: {error}'
+        logger.error(message)
+        send_message(bot, message)
+        raise Exception(message)
 
 
 def check_level(cache_list, current_price, version):
     """Проверяет, находится ли цена в допустимом для входа диапазоне."""
     logger.debug(f'{version}: Проверены уровни для входа')
     width = max(cache_list) - min(cache_list)
-    if min(cache_list) + 0.1 * width < current_price < max(cache_list) - 0.2 * width:
+    if min(cache_list) + 0.1 * width < current_price < max(cache_list) - 0.18 * width:
         return True
     return False
 
@@ -104,14 +110,14 @@ def get_timer(current_price, purchase_price, version):
     return COEF[version]['CHECK_TIME']
 
 
-def setup_cache(cache_level, version):
+def setup_cache(cache_level, version, bot):
     """Производит заполнение кэша для создания первоначальных уровней."""
-    while len(cache_level) < 5 * 60 / COEF[version]['SEARCH_TIME']:
-        current_price = check_price(version)
+    while len(cache_level) < 120 * 60 / COEF[version]['SEARCH_TIME']:  # Уменьшить при тестировании
+        current_price = check_price(version, bot)
         cache_level = cache(cache_level, current_price,
                             120 * 60 / COEF[version]['CHECK_TIME'], version)
         time.sleep(COEF[version]['SEARCH_TIME'])
-    logger.debug(f'{version}: Заполнил кэш при запуске бота')
+    logger.info(f'{version}: Заполнил кэш при запуске бота')
     return cache_level
 
 
@@ -126,6 +132,9 @@ def cache(cache_list, current_price, size, version):
             new_cache_list.append(cache_list[i])
         new_cache_list.append(current_price)
         return new_cache_list
+    elif len(cache_list) > int(size):
+        cache_list.pop(0)
+        cache_list.pop(1)
     cache_list.append(current_price)
     return cache_list
 
@@ -184,17 +193,17 @@ def main():
     """Основная логика работы бота."""
     bot = Bot(token=TELEGRAM_TOKEN)
     deposit_info = check_deposit_account(VERSION)
-    cache_inlet = setup_cache([], VERSION)
-    cache_level = setup_cache([], VERSION)
+    cache_level = setup_cache([], VERSION, bot)
+    cache_inlet = cache_level[-12:-1]
     while True:
-        current_price = check_price(VERSION)
+        current_price = check_price(VERSION, bot)
         cache_inlet = cache(cache_inlet, current_price, 5 * 60 / COEF[VERSION]['SEARCH_TIME'], VERSION)
         cache_level = cache(cache_level, current_price, 120 * 60 / COEF[VERSION]['CHECK_TIME'], VERSION)
         level_factor = check_level(cache_level, current_price, VERSION)
         if current_price <= max(cache_inlet) * COEF[VERSION]['INLET'] and level_factor:
             deal_info, deposit_info = buy_coin(deposit_info, current_price, bot, VERSION)
             while deal_info['in_deal']:
-                current_price = check_price(VERSION)
+                current_price = check_price(VERSION, bot)
                 cache_level = cache(cache_level, current_price, 120 * 60 / COEF[VERSION]['CHECK_TIME'], VERSION)
                 if current_price < deal_info['purchase_price'] * COEF[VERSION]['STOP']:
                     deal_info, deposit_info = sell_coin(
@@ -206,6 +215,7 @@ def main():
                     message = f'{VERSION}: Вылетел по стопу'
                     logger.info(message)
                     send_message(bot, message)
+                    cache_level = setup_cache([], VERSION, bot)  # Выключает бота на 2 часа
                 elif current_price >= deal_info['purchase_price'] * COEF[VERSION]['OUTLET']:
                     deal_info, deposit_info = sell_coin(
                         deposit_info,
@@ -216,7 +226,7 @@ def main():
                 else:
                     timer = get_timer(current_price, deal_info['purchase_price'], VERSION)
                     time.sleep(timer)
-            cache_inlet = cache_level
+            cache_inlet = cache_level[-12:-1]
             message = (f'{VERSION}: Сделка закрыта по цене {deal_info["selling_price"]}, '
                        f'зароботок: {deal_info["profit"]} USDT '
                        f'Текущий депозит: {deposit_info["USDT_DEPO"]} USDT')

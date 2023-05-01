@@ -48,16 +48,16 @@ def main():
     """Основная логика работы бота."""
     deposit_info = check_deposit_account(VERSION)
     bot = Bot(token=TELEGRAM_TOKEN)
-    cache_level = setup_cache([], VERSION)
+    cache_level = setup_cache([], VERSION, bot)
     while True:
-        current_price = check_price(VERSION)
+        current_price = check_price(VERSION, bot)
         random_inlet = randint(1, int(COEF[VERSION]['INLET']))
         cache_level = cache(cache_level, current_price, 120 * 60 / COEF[VERSION]['CHECK_TIME'], VERSION)
         level_factor = check_level(cache_level, current_price, VERSION)
         if random_inlet == int(COEF[VERSION]['INLET']) and level_factor:
             deal_info, deposit_info = buy_coin(deposit_info, current_price, bot, VERSION)
             while deal_info['in_deal']:
-                current_price = check_price(VERSION)
+                current_price = check_price(VERSION, bot)
                 cache_level = cache(cache_level,
                                     current_price,
                                     120 * 60 / COEF[VERSION]['CHECK_TIME'],
@@ -72,6 +72,7 @@ def main():
                     message = f'{VERSION}: Вылетел по стопу'
                     logger.info(message)
                     send_message(bot, message)
+                    cache_level = setup_cache([], VERSION, bot)  # Выключает бота на 2 часа
                 elif current_price >= deal_info['purchase_price'] * COEF[VERSION]['OUTLET']:
                     deal_info, deposit_info = sell_coin(
                         deposit_info,
