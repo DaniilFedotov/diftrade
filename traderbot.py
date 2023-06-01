@@ -228,7 +228,7 @@ def main():
                     time.sleep(timer)
             cache_inlet = cache_level[-12:-1]
             message = (f'{VERSION}: Сделка закрыта по цене {deal_info["selling_price"]}, '
-                       f'зароботок: {deal_info["profit"]} USDT '
+                       f'заработок: {deal_info["profit"]} USDT '
                        f'Текущий депозит: {deposit_info["USDT_DEPO"]} USDT')
             logger.info(message)
             send_message(bot, message)

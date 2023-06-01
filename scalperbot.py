@@ -83,7 +83,7 @@ def main():
                 else:
                     timer = get_timer(current_price, deal_info['purchase_price'], VERSION)
                     time.sleep(timer)
-            message = (f'{VERSION}: Сделка закрыта, зароботок: '
+            message = (f'{VERSION}: Сделка закрыта, заработок: '
                        f'{deal_info["profit"]} USDT '
                        f'Текущий депозит: {deposit_info["USDT_DEPO"]} USDT')
             logger.info(message)
