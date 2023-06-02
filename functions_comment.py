@@ -95,6 +95,13 @@ def check_level(logger, version, current_price):
         width = max(highs) - min(lows)  # Находим длину коридора для временного промежутка
         if (max(highs) - DEF[interval]['hc1'] * width < current_price < max(highs) + DEF[interval]['hc2'] * width or
                 min(lows) < current_price < min(lows) + DEF[interval]['lc'] * width): # Если цена в одном из промежутков
+            print(f'width: {width}'
+                  f'max2:{max(highs)}'
+                  f'curprice:{current_price}'
+                  f'max1{max(highs) - DEF[interval]["hc"] * width}')
+            print(f'low1:{min(lows)}'
+                  f'curprice:{current_price}'
+                  f'low2:{min(lows) + DEF[interval]["lc"] * width}')
             logger.debug(f'{version}: Проверены уровни для входа: False')
             return False  # Если цена находится в пределах толщины одного из уровней
     logger.debug(f'{version}: Проверены уровни для входа: True')
@@ -147,6 +154,11 @@ def sell_coin(logger, version, buy_info):
     sell_price = int(price * COEF[version]['OUTLET'])
     stop_price = int(price * COEF[version]['STOP'])
     stop_limit = int(price * COEF[version]['STOP_LIMIT'])
+    print(f'quantity:{quantity}'
+          f'price:{price}'
+          f'sell_price:{sell_price}'
+          f'stop_price:{stop_price}'
+          f'stop_limit:{stop_limit}')
     params = {
         "symbol": "BTCTUSD",  # Тикер токена
         "side": "SELL",  # Продажа
@@ -157,13 +169,17 @@ def sell_coin(logger, version, buy_info):
         "stopLimitTimeInForce": "GTC",
         "recvWindow": RECVWINDOW,  # Необходимо для предотвращения ошибки 1021
     }
+    print(params)
     response = client.new_oco_order(**params)  # Открывает ордер на продажу со стопом
+    print(f'respone в sell_coin: {response}')
     stop_order_id = str((response['orders'][0]['orderId']))
     limit_order_id = str((response['orders'][1]['orderId']))
     stop_order_info = client.get_order(symbol="BTCTUSD", orderId=stop_order_id, recvWindow=RECVWINDOW)
     limit_order_info = client.get_order(symbol="BTCTUSD", orderId=limit_order_id, recvWindow=RECVWINDOW)
     stop_order_status = stop_order_info['status']
     limit_order_status = limit_order_info['status']
+    print(f'stop_order_info:{stop_order_info}')
+    print(f'limit_order_info:{limit_order_info}')
     while stop_order_status != 'FILLED' and limit_order_status != 'FILLED':
         timer = get_timer(logger, version, param='CHECK_T')
         time.sleep(timer)
@@ -175,6 +191,7 @@ def sell_coin(logger, version, buy_info):
                    f'{stop_order_info}, status: {stop_order_status},'
                    f'{limit_order_info}, status: {limit_order_status},')
         logger.debug(message)
+        print(f'statuses:{stop_order_status, limit_order_status}')
     if stop_order_status == 'FILLED':
         order_info = stop_order_info
         message = f'{version}: Продано по стопу'
@@ -188,10 +205,12 @@ def sell_coin(logger, version, buy_info):
     else:
         order_info = response
         message = f'{version}: Непонятная ошибка со статусами ордеров'
+        print(message)
         logger.info(message)
         send_message(logger, message)
         timer = get_timer(logger, version, param='STOP')
         time.sleep(timer)
+    print(f'order_info в конце sell_coin: {order_info}')
     message = (f'{version}: Продано {quantity} BTC на сумму '
                f'{order_info["cummulativeQuoteQty"]} TUSD по цене {order_info["price"]}')
     logger.info(message)
