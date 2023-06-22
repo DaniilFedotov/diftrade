@@ -1,14 +1,10 @@
-import datetime
-import os
-import sys
 import time
 from random import randint
 
 import logging
-import requests
 
 from functions import (VERSIONS, COEF, check_level, check_price, get_logger,
-                       buy_coin, sell_coin, get_timer, send_message)
+                       buy_coin, sell_coin, get_timer, send_message, get_balance)
 
 
 VERSION = VERSIONS[1]  # Выбираем версию бота
@@ -18,13 +14,14 @@ logger = get_logger(VERSION)  # Получает логгер
 
 def main():
     """Основная логика работы бота."""
+    cur_depo = get_balance(logger, VERSION, 'TUSD')
     while True:
         random_factor = randint(1, int(COEF[VERSION]['INLET']))  # Фактор входа для Scalper, основанный на рандоме
         current_price = check_price(logger, VERSION)  # Проверяет текущую цену для проверки уровней
         level_factor = check_level(logger, VERSION, current_price)  # Фактор входа, основанный на уровнях
         logging.debug(f'random_factor: {random_factor}, level_factor: {level_factor}')
         if random_factor == int(COEF[VERSION]['INLET']) and level_factor:  # Если оба фактора указывают на вход в сделку
-            buy_info = buy_coin(logger, VERSION)
+            buy_info = buy_coin(logger, VERSION, cur_depo)
             sell_info = None
             logging.debug(f'buy_info: {buy_info}')
             if buy_info['status'] == 'FILLED':
@@ -34,6 +31,7 @@ def main():
             message = (f'{VERSION}: Сделка закрыта, заработок: '
                        f'{profit} TUSD '
                        f'Текущий депозит (ориентировочно): {sell_info["cummulativeQuoteQty"]} TUSD')
+            cur_depo = sell_info["cummulativeQuoteQty"]
             logging.info(message)
             send_message(logger, message)
         timer = get_timer(logger, VERSION, param='SEARCH')

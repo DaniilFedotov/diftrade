@@ -3,8 +3,8 @@ import sys
 
 import logging
 import time
+from random import randint
 
-import requests
 from dotenv import load_dotenv
 from telegram import TelegramError, Bot
 from binance.spot import Spot
@@ -19,7 +19,7 @@ COEF = {VERSIONS[0]: {'INLET': 0.9992,
         VERSIONS[1]: {'INLET': 5,
                       'OUTLET': 1.0005,
                       'STOP': 0.985,
-                      'STOP_LIMIT': 0.984,
+                      'STOP_LIMIT': 0.9845,
                       'CHECK_T': 60},
         VERSIONS[2]: {'INLET': 0.9990,
                       'OUTLET': 1.0025,
@@ -34,12 +34,7 @@ BINANCE_KEY = os.getenv('BINANCE_SECRET_KEY_SDK')  # Ключ для верси�
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')  # Токен для управления ботом
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')  # ID чата, в который требуется отправка сообщений
 
-BASE_URL = 'https://api.binance.com'  # Адрес API бинанса
-ENDPOINT = '/api/v3/'  # Эндпоинт
-ENDPOINT_FUNC = 'ticker/price'  # Функция, в данный момент получение цены по тикеру
-HEADERS = {"Authorization": f"OAuth {BINANCE_TOKEN}"}
-
-DEF = {  # DEFINITION, коэф-ты для проверки уровней. Определяют толщину уровня и длину участка
+LVL_C = {  # LEVEL COEFFICIENTS, коэф-ты для проверки уровней. Определяют толщину уровня и длину участка
     12: {'hc1': 0.1,  # high_coef снизу от уровня
          'hc2': 0.0,  # high_coef сверху от уровня
          'lc': 0.1,  # low-coef сверху от уровня
@@ -59,6 +54,11 @@ DEF = {  # DEFINITION, коэф-ты для проверки уровней. О�
         'hc2': 0.0,
         'lc': 0.06,
         'st': 23,
+        'end': 24},
+    8: {'hc1': 0.22,  # Для предотвращения перекупленности
+        'hc2': 0.0,
+        'lc': 0.1,
+        'st': 16,
         'end': 24}
 }  # Сумма ключей должна быть равна 24 (часам)
 
@@ -82,21 +82,35 @@ def get_logger(version):
     return logger
 
 
+def check_inlet_condition(logger, version, current_price):
+    """Проверяет условие для входа, зависящее от версии бота."""
+    if version == VERSIONS[0]:
+        pass
+    elif version == VERSIONS[1]:
+        random_factor = randint(1, int(COEF[version]['INLET']))  # Фактор входа для Scalper, основанный на рандоме
+        return random_factor == int(COEF[version]['INLET'])
+    elif version == VERSIONS[2]:
+        pass
+
+
 def check_level(logger, version, current_price):
     """Проверяет, находится ли цена в допустимом для входа диапазоне."""
-    intervals = DEF.keys()  # Содержит в себе нелинейные временные промежутки на таймфрейме
+    intervals = LVL_C.keys()  # Содержит в себе нелинейные временные промежутки на таймфрейме
     data = client.klines('BTCTUSD', '1h', limit=24)  # В ответ на API-запрос получает свечи за указанный период
     for interval in intervals:  # Для каждого из временных промежутков
         highs = []
         lows = []
-        for data_hour in data[DEF[interval]['st']:DEF[interval]['end']]:  # Для каждого часа из временного промежутка
+        for data_hour in data[LVL_C[interval]['st']:LVL_C[interval]['end']]:  # Для каждого часа из промежутка
             highs.append(float(data_hour[2]))  # Добавляем наибольшее значение цены для часа в список
             lows.append(float(data_hour[3]))  # Добавляем наименьшее значение цены для часа в список
         width = max(highs) - min(lows)  # Находим длину коридора для временного промежутка
-        if (max(highs) - DEF[interval]['hc1'] * width < current_price < max(highs) + DEF[interval]['hc2'] * width or
-                min(lows) < current_price < min(lows) + DEF[interval]['lc'] * width): # Если цена в одном из промежутков
+        if (max(highs) - LVL_C[interval]['hc1'] * width < current_price < max(highs) + LVL_C[interval]['hc2'] * width or
+                min(lows) < current_price < min(lows) + LVL_C[interval]['lc'] * width):  # Если цена в промежутке
             logger.debug(f'{version}: Проверены уровни для входа: False')
             return False  # Если цена находится в пределах толщины одного из уровней
+        if width < 5 * current_price * (COEF[version]['OUTLET'] - 1):
+            logger.debug(f'{version}: Проверены уровни для входа: False')
+            return False
     logger.debug(f'{version}: Проверены уровни для входа: True')
     return True  # Если цена не находится в пределах толщины одного из уровней
 
@@ -123,9 +137,15 @@ def send_message(logger, message):
         logger.error(f'Сбой при отправке сообщения в Telegram: {message}')
 
 
-def buy_coin(logger, version):
+def buy_coin(logger, version, cur_depo):
     """Выставляет рыночный ордер на покупку монеты."""
-    quote = get_balance(logger, version, 'TUSD')
+    try:
+        quote = get_balance(logger, version, 'TUSD')
+    except Exception:
+        quote = cur_depo
+        message = f'{version}: Баланс принят равным: {cur_depo} (Искл)'
+        logger.error(message)
+        send_message(logger, message)
     params = {
         "symbol": "BTCTUSD",  # Тикер токена
         "side": "BUY",  # Покупка
