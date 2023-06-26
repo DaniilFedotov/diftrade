@@ -11,9 +11,6 @@ class Trader:
         self.name = name
         self.logger = logger
 
-    def __str__(self):
-        return self.name
-
     def check_inlet_condition(self):
         """Проверяет условие для входа, зависящее от версии бота."""
         random_factor = randint(1, int(COEF['INLET']))  # Фактор входа, основанный на рандоме
