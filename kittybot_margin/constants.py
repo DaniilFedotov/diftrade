@@ -13,8 +13,8 @@ COEF = {'INLET': 5,
 
 load_dotenv()  # Загружает секретные ключи
 
-BINANCE_TOKEN = os.getenv('BINANCE_TOKEN_KBM')  # Токен для версии через SDK
-BINANCE_KEY = os.getenv('BINANCE_SECRET_KEY_KBM')  # Ключ для версии через SDK
+BINANCE_TOKEN = os.getenv('BINANCE_TOKEN_SDK')  # Токен для версии через SDK
+BINANCE_KEY = os.getenv('BINANCE_SECRET_KEY_SDK')  # Ключ для версии через SDK
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')  # Токен для управления ботом
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')  # ID чата, в который требуется отправка сообщений
 
