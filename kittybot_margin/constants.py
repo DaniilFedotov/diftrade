@@ -13,8 +13,11 @@ COEF = {'INLET': 2,
 
 load_dotenv()  # Загружает секретные ключи
 
-BINANCE_TOKEN = os.getenv('BINANCE_TOKEN_SDK')  # Токен для версии через SDK
-BINANCE_KEY = os.getenv('BINANCE_SECRET_KEY_SDK')  # Ключ для версии через SDK
+BINANCE_TOKEN_OLD = os.getenv('BINANCE_TOKEN_SDK')  # Токен для версии через SDK
+BINANCE_KEY_OLD = os.getenv('BINANCE_SECRET_KEY_SDK')  # Ключ для версии через SDK
+BINANCE_TOKEN_NEW = os.getenv('BINANCE_TOKEN_KBM')
+BINANCE_KEY_NEW = os.getenv('BINANCE_SECRET_KEY_KBM')
+
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')  # Токен для управления ботом
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')  # ID чата, в который требуется отправка сообщений
 
@@ -44,10 +47,26 @@ LVL_C = {  # LEVEL COEFFICIENTS, коэф-ты для проверки уров�
         'lc': 0.1,
         'st': 16,
         'end': 24}
-}  # Сумма ключей должна быть равна 24 (часам)
+}
+
+VLT_C = {  # VOLATILITY COEFFICIENTS, коэф-ты для проверки волатильности.
+    8: {'hvc': 0.015,  # high_volatility_coef- коэффициент высокой волатильности. Выражен в долях от цены
+        'lvc': 0.0025,  # low_volatility_coef - коэффициент низкой волатильности. Выражен в долях от цены
+        'st': 16,  # start - начало интервала
+        'end': 24},  # end - конец интервала
+    3: {'hvc': 0.01,
+        'lvc': 0.0025,
+        'st': 21,
+        'end': 24},
+    1: {'hvc': 0.01,
+        'lvc': 0.0015,  # На 5минутных таймфреймах добавить проверку волатильности, иначе в начале часа она недост
+        'st': 23,
+        'end': 24}
+}
 
 RECVWINDOW = 59000
 
 BOT_TG = Bot(token=TELEGRAM_TOKEN)  # Регистрируем Telegram-бота
 
-CLIENT_BINANCE = Spot(api_key=BINANCE_TOKEN, api_secret=BINANCE_KEY)  # Регистрируем клиента для API-binance
+CLIENT_BINANCE = Spot(api_key=BINANCE_TOKEN_NEW, api_secret=BINANCE_KEY_NEW)  # Регистрируем клиента для API-binance
+CLIENT_BINANCE_OLD = Spot(api_key=BINANCE_TOKEN_OLD, api_secret=BINANCE_KEY_OLD)

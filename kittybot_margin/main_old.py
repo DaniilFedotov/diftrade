@@ -1,7 +1,7 @@
 import time
 
 from functions import get_logger
-from classes import TraderSpot
+from classes import TraderSpotOld
 
 
 def main(bot):
@@ -31,7 +31,7 @@ def main(bot):
 
 
 if __name__ == "__main__":
-    name = 'kittybot_spot_new_test'  # Имя торгового бота
+    name = 'kittybot_spot_old_test'  # Имя торгового бота. Олд - мой бинанс, по старой схеме
     logger = get_logger(name)  # Получает логгер
-    kittybot = TraderSpot(name, logger)
+    kittybot = TraderSpotOld(name, logger)
     main(kittybot)
