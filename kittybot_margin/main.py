@@ -1,7 +1,7 @@
 import time
 
 from functions import get_logger
-from classes import Trader
+from classes import Trader, TraderSpot
 
 
 def main(bot):
@@ -33,5 +33,5 @@ def main(bot):
 if __name__ == "__main__":
     name = 'kittybot_margin_test'  # Имя торгового бота
     logger = get_logger(name)  # Получает логгер
-    kittybot = Trader(name, logger)
+    kittybot = TraderSpot(name, logger)
     main(kittybot)

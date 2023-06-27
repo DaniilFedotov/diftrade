@@ -6,7 +6,7 @@ from telegram import TelegramError
 from constants import COEF, LVL_C, CLIENT_BINANCE, BOT_TG, RECVWINDOW, TELEGRAM_CHAT_ID
 
 
-class Trader:
+class Trader:  # Родительский класс для торговых ботов
     def __init__(self, name, logger):
         self.name = name
         self.logger = logger
@@ -15,27 +15,6 @@ class Trader:
         """Проверяет условие для входа, зависящее от версии бота."""
         random_factor = randint(1, int(COEF['INLET']))  # Фактор входа, основанный на рандоме
         return random_factor == int(COEF['INLET'])  # True/False
-
-    def check_level(self, cur_price):
-        """Проверяет, находится ли цена в допустимом для входа диапазоне."""
-        intervals = LVL_C.keys()  # Содержит в себе нелинейные временные промежутки на таймфрейме
-        data = CLIENT_BINANCE.klines('BTCTUSD', '1h', limit=24)  # В ответ на API-запрос получает свечи за период
-        for dt in intervals:  # Для каждого из временных промежутков
-            highs = []
-            lows = []
-            for data_hour in data[LVL_C[dt]['st']:LVL_C[dt]['end']]:  # Для каждого часа из промежутка
-                highs.append(float(data_hour[2]))  # Добавляем наибольшее значение цены для часа в список
-                lows.append(float(data_hour[3]))  # Добавляем наименьшее значение цены для часа в список
-            width = max(highs) - min(lows)  # Находим длину коридора для временного промежутка
-            if (max(highs) - LVL_C[dt]['hc1'] * width < cur_price < max(highs) + LVL_C[dt]['hc2'] * width or
-                    min(lows) < cur_price < min(lows) + LVL_C[dt]['lc'] * width):  # Если цена в промежутке
-                self.logger.debug(f'{self.name}: Проверены уровни для входа: False')
-                return False  # Если цена находится в пределах толщины одного из уровней
-            if width < 5 * cur_price * (COEF['OUTLET'] - 1):
-                self.logger.debug(f'{self.name}: Проверены уровни для входа: False')
-                return False  # Если волатильность не достаточна
-        self.logger.debug(f'{self.name}: Проверены уровни для входа: True')
-        return True  # Если цена не находится в пределах толщины одного из уровней
 
     def check_price(self):
         """Проверяет цену монеты."""
@@ -74,6 +53,29 @@ class Trader:
         elif param == 'SEARCH':
             return 30
         return COEF['CHECK_T']
+
+
+class TraderSpot(Trader):  # Класс для спотовой торговли
+    def check_level(self, cur_price):
+        """Проверяет, находится ли цена в допустимом для входа диапазоне."""
+        intervals = LVL_C.keys()  # Содержит в себе нелинейные временные промежутки на таймфрейме
+        data = CLIENT_BINANCE.klines('BTCTUSD', '1h', limit=24)  # В ответ на API-запрос получает свечи за период
+        for dt in intervals:  # Для каждого из временных промежутков
+            highs = []
+            lows = []
+            for data_hour in data[LVL_C[dt]['st']:LVL_C[dt]['end']]:  # Для каждого часа из промежутка
+                highs.append(float(data_hour[2]))  # Добавляем наибольшее значение цены для часа в список
+                lows.append(float(data_hour[3]))  # Добавляем наименьшее значение цены для часа в список
+            width = max(highs) - min(lows)  # Находим длину коридора для временного промежутка
+            if (max(highs) - LVL_C[dt]['hc1'] * width < cur_price < max(highs) + LVL_C[dt]['hc2'] * width or
+                    min(lows) < cur_price < min(lows) + LVL_C[dt]['lc'] * width):  # Если цена в промежутке
+                self.logger.debug(f'{self.name}: Проверены уровни для входа: False')
+                return False  # Если цена находится в пределах толщины одного из уровней
+            if width < 5 * cur_price * (COEF['OUTLET'] - 1):
+                self.logger.debug(f'{self.name}: Проверены уровни для входа: False')
+                return False  # Если волатильность не достаточна
+        self.logger.debug(f'{self.name}: Проверены уровни для входа: True')
+        return True  # Если цена не находится в пределах толщины одного из уровней
 
     def buy_coin(self, cur_depo):
         """Выставляет рыночный ордер на покупку монеты."""
