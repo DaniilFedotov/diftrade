@@ -3,24 +3,23 @@ import time
 
 from telegram import TelegramError
 
-from constants import COEF, LVL_C, VLT_C, CLIENT_BINANCE, CLIENT_BINANCE_OLD, BOT_TG, RECVWINDOW, TELEGRAM_CHAT_ID
+from constants import COEF, LVL_C, VLT_C, BOT_TG, RECVWINDOW, TELEGRAM_CHAT_ID
 
 
 class Trader:  # Родительский класс для торговых ботов
-    def __init__(self, name, logger):
+    def __init__(self, name, logger, token, currency, client):
         self.name = name
         self.logger = logger
-
-    def check_inlet_condition(self):
-        """Проверяет условие для входа, зависящее от версии бота."""
-        random_factor = randint(1, int(COEF['INLET']))  # Фактор входа, основанный на рандоме
-        return random_factor == int(COEF['INLET'])  # True/False
+        self.token = token
+        self.currency = currency
+        self.pair = token + currency
+        self.client = client
 
     def check_price(self):
         """Проверяет цену монеты."""
         try:
-            price = float(CLIENT_BINANCE.ticker_price('BTCTUSD')["price"])  # В ответ на API-запрос получает цену монеты
-            self.logger.debug(f'{self.name}: Цена проверена: {price} TUSD')
+            price = float(self.client.ticker_price(self.pair)["price"])  # Получает цену токена
+            self.logger.debug(f'{self.name}: Цена проверена: {price} {self.currency}')
             return price
         except Exception as error:
             message = f'Ошибка при проверке цены: {error}'
@@ -36,15 +35,6 @@ class Trader:  # Родительский класс для торговых б�
         except TelegramError:
             self.logger.error(f'Сбой при отправке сообщения в Telegram: {message}')
 
-    def get_balance(self, tiker):
-        """Показывает количество запрошенной монеты на аккаунте."""
-        self.logger.debug(f'{self.name}: Проверил баланс {tiker}')
-        all_tokens = CLIENT_BINANCE.account()["balances"]
-        for token in all_tokens:
-            if token['asset'] == tiker:  # Для указанного тикера
-                return float(token['free'])
-        return 0
-
     def get_timer(self, param):
         """Определяет время следующего запроса к API в зависимости от исхода."""
         self.logger.debug(f'{self.name}: Определил время следующего запроса')
@@ -56,24 +46,40 @@ class Trader:  # Родительский класс для торговых б�
 
 
 class TraderSpot(Trader):  # Класс для спотовой торговли
-    def buy_coin(self, cur_depo):
+    def get_balance(self):
+        """Показывает количество запрошенной монеты на аккаунте."""
+        self.logger.debug(f'{self.name}: Проверил баланс {self.currency}')
+        all_tokens = self.client.account()["balances"]
+        for token in all_tokens:
+            if token['asset'] == self.currency:  # Для указанного тикера
+                return float(token['free'])
+        return 0
+
+    def check_inlet_condition(self):
+        """Проверяет условие для входа, зависящее от версии бота."""
+        random_factor = randint(1, int(COEF['INLET']))  # Фактор входа, основанный на рандоме
+        return random_factor == int(COEF['INLET'])  # True/False
+
+    def buy_coin(self, cur_depo, cur_price):
         """Выставляет рыночный ордер на покупку монеты."""
         try:
-            quote = self.get_balance('TUSD')
+            quote = self.get_balance()
         except Exception:
             quote = cur_depo
-            message = f'{self.name}: Баланс принят равным: {cur_depo} (Искл)'
+            message = f'{self.name}: Баланс принят равным: {cur_depo} {self.currency}(Искл)'
             self.logger.error(message)
             self.send_message(message)
+        quantity = quote / cur_price
+        quantity_for_btc = quantity // 0.00001 / 100000  # Обрезает кол-во монет под нужный формат
         params = {
-            "symbol": "BTCTUSD",  # Тикер токена
+            "symbol": self.pair,  # Тикер токена
             "side": "BUY",  # Покупка
             "type": "MARKET",  # Тип ордера - рыночный
-            "quoteOrderQty": quote,  # Сумма TUSD на ордер
+            "quantity": quantity_for_btc,  # Количество. Другой вариант - quoteOrderQty
         }
-        response = CLIENT_BINANCE.new_order(**params)  # Открывает ордер на покупку по рыночной цене
-        message = (f'{self.name}: Куплено {response["origQty"]} BTC на сумму '
-                   f'{response["cummulativeQuoteQty"]} TUSD по цене {response["fills"][0]["price"]}')
+        response = self.client.new_order(**params)  # Открывает ордер на покупку по рыночной цене
+        message = (f'{self.name}: Куплено {response["origQty"]} {self.token} на сумму '
+                   f'{response["cummulativeQuoteQty"]} {self.currency} по цене {response["fills"][0]["price"]}')
         self.logger.info(message)
         self.send_message(message)
         return response
@@ -86,7 +92,7 @@ class TraderSpot(Trader):  # Класс для спотовой торговли
         stop_price = int(price * COEF['STOP'])
         stop_limit = int(price * COEF['STOP_LIMIT'])
         params = {
-            "symbol": "BTCTUSD",  # Тикер токена
+            "symbol": self.pair,  # Тикер токена
             "side": "SELL",  # Продажа
             "quantity": quantity,  # Количество монет
             "price": sell_price,  # Заданная цена
@@ -95,18 +101,18 @@ class TraderSpot(Trader):  # Класс для спотовой торговли
             "stopLimitTimeInForce": "GTC",
             "recvWindow": RECVWINDOW,  # Необходимо для предотвращения ошибки 1021
         }
-        response = CLIENT_BINANCE.new_oco_order(**params)  # Открывает ордер на продажу со стопом
+        response = self.client.new_oco_order(**params)  # Открывает ордер на продажу со стопом
         stop_order_id = str((response['orders'][0]['orderId']))
         limit_order_id = str((response['orders'][1]['orderId']))
-        stop_order_info = CLIENT_BINANCE.get_order(symbol="BTCTUSD", orderId=stop_order_id, recvWindow=RECVWINDOW)
-        limit_order_info = CLIENT_BINANCE.get_order(symbol="BTCTUSD", orderId=limit_order_id, recvWindow=RECVWINDOW)
+        stop_order_info = self.client.get_order(symbol=self.pair, orderId=stop_order_id, recvWindow=RECVWINDOW)
+        limit_order_info = self.client.get_order(symbol=self.pair, orderId=limit_order_id, recvWindow=RECVWINDOW)
         stop_order_status = stop_order_info['status']
         limit_order_status = limit_order_info['status']
         while stop_order_status != 'FILLED' and limit_order_status != 'FILLED':
             timer = self.get_timer(param='CHECK_T')
             time.sleep(timer)
-            stop_order_info = CLIENT_BINANCE.get_order("BTCTUSD", orderId=stop_order_id, recvWindow=RECVWINDOW)
-            limit_order_info = CLIENT_BINANCE.get_order("BTCTUSD", orderId=limit_order_id, recvWindow=RECVWINDOW)
+            stop_order_info = self.client.get_order(self.pair, orderId=stop_order_id, recvWindow=RECVWINDOW)
+            limit_order_info = self.client.get_order(self.pair, orderId=limit_order_id, recvWindow=RECVWINDOW)
             stop_order_status = stop_order_info['status']
             limit_order_status = limit_order_info['status']
             message = (f'{self.name}: Проверено состояние ордеров:'
@@ -130,16 +136,16 @@ class TraderSpot(Trader):  # Класс для спотовой торговли
             self.send_message(message)
             timer = self.get_timer(param='STOP')
             time.sleep(timer)
-        message = (f'{self.name}: Продано {quantity} BTC на сумму '
-                   f'{order_info["cummulativeQuoteQty"]} TUSD по цене {order_info["price"]}')
+        message = (f'{self.name}: Продано {quantity} {self.token} на сумму '
+                   f'{order_info["cummulativeQuoteQty"]} {self.currency} по цене {order_info["price"]}')
         self.logger.info(message)
         self.send_message(message)
         return order_info
 
     def check_level(self, cur_price):
         """Проверяет, находится ли цена в допустимом для входа диапазоне."""
-        data_24h = CLIENT_BINANCE.klines('BTCTUSD', '1h', limit=24)  # В ответ на API-запрос получает свечи за период
-        #data_60m = CLIENT_BINANCE.klines('BTCTUSD', '5m', limit=12)  # В ответ на API-запрос получает свечи за период
+        data_24h = self.client.klines(self.pair, '1h', limit=24)  # В ответ на API-запрос получает свечи за период
+        #data_60m = self.client.klines(self.pair, '5m', limit=12)  # В ответ на API-запрос получает свечи за период
         checks_box = []
         check_first = self.check_global_level(cur_price, data_24h)  # True/False
         checks_box.append(check_first)
@@ -167,7 +173,8 @@ class TraderSpot(Trader):  # Класс для спотовой торговли
             width = max(highs) - min(lows)  # Находим длину коридора для временного промежутка
             if (max(highs) - LVL_C[dt]['hc1'] * width < cur_price < max(highs) + LVL_C[dt]['hc2'] * width or
                     min(lows) < cur_price < min(lows) + LVL_C[dt]['lc'] * width):  # Если цена в промежутке
-                self.logger.debug(f'{self.name}: Проверены уровни для входа: False')
+                self.logger.debug(f'{self.name}: Проверены уровни для входа: False. '
+                                  f'Проверку уровней не прошел промежуток: {dt}')
                 return False  # Если цена находится в пределах толщины одного из уровней
         self.logger.debug(f'{self.name}: Проверены уровни для входа: True')
         return True  # Если цена не находится в пределах толщины одного из уровней
@@ -183,7 +190,8 @@ class TraderSpot(Trader):  # Класс для спотовой торговли
                 lows.append(float(data_hour[3]))  # Добавляем наименьшее значение цены для часа в список
             width = max(highs) - min(lows)  # Находим длину коридора для временного промежутка
             if width < VLT_C[dt]['lvc'] * cur_price or width > VLT_C[dt]['hvc'] * cur_price:
-                self.logger.debug(f'{self.name}: Проверена волатильность: False')
+                self.logger.debug(f'{self.name}: Проверена волатильность: False. '
+                                  f'Проверку волатильности не прошел промежуток: {dt}')
                 return False  # Если волатильность не находится в пределах допустимой величины
         self.logger.debug(f'{self.name}: Проверена волатильность: True')
         return True  # Если волатильность находится в пределах допустимой величины
@@ -194,24 +202,40 @@ class TraderSpot(Trader):  # Класс для спотовой торговли
 
 
 class TraderSpotOld(Trader):  # Класс для спотовой торговли
-    def buy_coin(self, cur_depo):
+    def get_balance(self):
+        """Показывает количество запрошенной монеты на аккаунте."""
+        self.logger.debug(f'{self.name}: Проверил баланс {self.currency}')
+        all_tokens = self.client.account()["balances"]
+        for token in all_tokens:
+            if token['asset'] == self.currency:  # Для указанного тикера
+                return float(token['free'])
+        return 0
+
+    def check_inlet_condition(self):
+        """Проверяет условие для входа, зависящее от версии бота."""
+        random_factor = randint(1, 5)  # Фактор входа, основанный на рандоме, для старой версии - 5
+        return random_factor == int(COEF['INLET'])  # True/False
+
+    def buy_coin(self, cur_depo, cur_price):
         """Выставляет рыночный ордер на покупку монеты."""
         try:
-            quote = self.get_balance('TUSD')
+            quote = self.get_balance()
         except Exception:
             quote = cur_depo
             message = f'{self.name}: Баланс принят равным: {cur_depo} (Искл)'
             self.logger.error(message)
             self.send_message(message)
+        quantity = quote / cur_price
+        quantity_for_btc = quantity // 0.00001 / 100000  # Обрезает кол-во монет под нужный формат
         params = {
-            "symbol": "BTCTUSD",  # Тикер токена
+            "symbol": self.pair,  # Тикер токена
             "side": "BUY",  # Покупка
             "type": "MARKET",  # Тип ордера - рыночный
-            "quoteOrderQty": quote,  # Сумма TUSD на ордер
+            "quantity": quantity_for_btc,  # Сумма TUSD на ордер
         }
-        response = CLIENT_BINANCE_OLD.new_order(**params)  # Открывает ордер на покупку по рыночной цене
-        message = (f'{self.name}: Куплено {response["origQty"]} BTC на сумму '
-                   f'{response["cummulativeQuoteQty"]} TUSD по цене {response["fills"][0]["price"]}')
+        response = self.client.new_order(**params)  # Открывает ордер на покупку по рыночной цене
+        message = (f'{self.name}: Куплено {response["origQty"]} {self.token} на сумму '
+                   f'{response["cummulativeQuoteQty"]} {self.currency} по цене {response["fills"][0]["price"]}')
         self.logger.info(message)
         self.send_message(message)
         return response
@@ -224,7 +248,7 @@ class TraderSpotOld(Trader):  # Класс для спотовой торгов�
         stop_price = int(price * COEF['STOP'])
         stop_limit = int(price * COEF['STOP_LIMIT'])
         params = {
-            "symbol": "BTCTUSD",  # Тикер токена
+            "symbol": self.pair,  # Тикер токена
             "side": "SELL",  # Продажа
             "quantity": quantity,  # Количество монет
             "price": sell_price,  # Заданная цена
@@ -233,18 +257,18 @@ class TraderSpotOld(Trader):  # Класс для спотовой торгов�
             "stopLimitTimeInForce": "GTC",
             "recvWindow": RECVWINDOW,  # Необходимо для предотвращения ошибки 1021
         }
-        response = CLIENT_BINANCE_OLD.new_oco_order(**params)  # Открывает ордер на продажу со стопом
+        response = self.client.new_oco_order(**params)  # Открывает ордер на продажу со стопом
         stop_order_id = str((response['orders'][0]['orderId']))
         limit_order_id = str((response['orders'][1]['orderId']))
-        stop_order_info = CLIENT_BINANCE_OLD.get_order(symbol="BTCTUSD", orderId=stop_order_id, recvWindow=RECVWINDOW)
-        limit_order_info = CLIENT_BINANCE_OLD.get_order(symbol="BTCTUSD", orderId=limit_order_id, recvWindow=RECVWINDOW)
+        stop_order_info = self.client.get_order(symbol=self.pair, orderId=stop_order_id, recvWindow=RECVWINDOW)
+        limit_order_info = self.client.get_order(symbol=self.pair, orderId=limit_order_id, recvWindow=RECVWINDOW)
         stop_order_status = stop_order_info['status']
         limit_order_status = limit_order_info['status']
         while stop_order_status != 'FILLED' and limit_order_status != 'FILLED':
             timer = self.get_timer(param='CHECK_T')
             time.sleep(timer)
-            stop_order_info = CLIENT_BINANCE_OLD.get_order("BTCTUSD", orderId=stop_order_id, recvWindow=RECVWINDOW)
-            limit_order_info = CLIENT_BINANCE_OLD.get_order("BTCTUSD", orderId=limit_order_id, recvWindow=RECVWINDOW)
+            stop_order_info = self.client.get_order(self.pair, orderId=stop_order_id, recvWindow=RECVWINDOW)
+            limit_order_info = self.client.get_order(self.pair, orderId=limit_order_id, recvWindow=RECVWINDOW)
             stop_order_status = stop_order_info['status']
             limit_order_status = limit_order_info['status']
             message = (f'{self.name}: Проверено состояние ордеров:'
@@ -268,8 +292,8 @@ class TraderSpotOld(Trader):  # Класс для спотовой торгов�
             self.send_message(message)
             timer = self.get_timer(param='STOP')
             time.sleep(timer)
-        message = (f'{self.name}: Продано {quantity} BTC на сумму '
-                   f'{order_info["cummulativeQuoteQty"]} TUSD по цене {order_info["price"]}')
+        message = (f'{self.name}: Продано {quantity} {self.token} на сумму '
+                   f'{order_info["cummulativeQuoteQty"]} {self.currency} по цене {order_info["price"]}')
         self.logger.info(message)
         self.send_message(message)
         return order_info
@@ -277,7 +301,7 @@ class TraderSpotOld(Trader):  # Класс для спотовой торгов�
     def check_level(self, cur_price):
         """Проверяет, находится ли цена в допустимом для входа диапазоне."""
         intervals = LVL_C.keys()  # Содержит в себе нелинейные временные промежутки на таймфрейме
-        data = CLIENT_BINANCE_OLD.klines('BTCTUSD', '1h', limit=24)  # В ответ на API-запрос получает свечи за период
+        data = self.client.klines(self.pair, '1h', limit=24)  # В ответ на API-запрос получает свечи за период
         for dt in intervals:  # Для каждого из временных промежутков
             highs = []
             lows = []
@@ -290,7 +314,8 @@ class TraderSpotOld(Trader):  # Класс для спотовой торгов�
                 self.logger.debug(f'{self.name}: Проверены уровни для входа: False')
                 return False  # Если цена находится в пределах толщины одного из уровней
             if width < 5 * cur_price * (COEF['OUTLET'] - 1):
-                self.logger.debug(f'{self.name}: Проверены уровни для входа: False')
+                self.logger.debug(f'{self.name}: Проверены уровни для входа: False. '
+                                  f'Проверку уровней не прошел промежуток: {dt}')
                 return False  # Если волатильность не достаточна
         self.logger.debug(f'{self.name}: Проверены уровни для входа: True')
         return True  # Если цена не находится в пределах толщины одного из уровней
