@@ -1,8 +1,8 @@
 import time
 
-from functions import get_logger
-from classes import TraderSpotOld
-from constants import TRADER_NAME, TOKEN_NAME, CURRENCY, CLIENT_BINANCE_S
+from ..core.functions import get_logger
+from ..core.classes import TraderSpotOld
+from ..core.constants import TRADER_NAME, TOKEN_NAME, CURRENCY, CLIENT_BINANCE_S
 
 
 def main(bot):

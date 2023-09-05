@@ -5,7 +5,7 @@ from telegram import Bot
 from binance.spot import Spot
 
 
-TRADER_NAME = 'kittybot_spot'
+TRADER_NAME = 'kittybot_spot_margin_1'
 TOKEN_NAME = 'BTC'
 CURRENCY = 'TUSD'
 

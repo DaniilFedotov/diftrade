@@ -5,11 +5,11 @@ from telegram import Bot
 from binance.spot import Spot
 
 
-TRADER_NAME = 'kittybot_spot_old'
+TRADER_NAME = 'kittybot_spot'
 TOKEN_NAME = 'BTC'
 CURRENCY = 'TUSD'
 
-COEF = {'INLET': 5,
+COEF = {'INLET': 2,
         'OUTLET': 1.0005,
         'STOP': 0.985,
         'STOP_LIMIT': 0.9845,
