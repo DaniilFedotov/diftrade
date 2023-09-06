@@ -23,13 +23,38 @@ print(tusd_value)
 """
 account = CLIENT_BINANCE_S.isolated_margin_account(symbols='BTCTUSD')
 print(account)
-response = CLIENT_BINANCE_S.new_margin_order(
+# Лимитный маржин ордер
+# response = CLIENT_BINANCE_S.new_margin_order(
+#     symbol='BTCTUSD',
+#     isIsolated=True,
+#     side='BUY',
+#     type='LIMIT',
+#     quantity=0.0397,
+#     price='25000',
+#     sideEffectType='MARGIN_BUY',
+#     timeInForce='GTC',
+# )
+
+# Рыночный маржин ордер
+# response = CLIENT_BINANCE_S.new_margin_order(
+#     symbol='BTCTUSD',
+#     isIsolated=True,
+#     side='BUY',
+#     type='MARKET',
+#     quantity=0.018,
+#     sideEffectType='MARGIN_BUY',
+# )
+
+# Лимит ОСО ордер на продажу
+response = CLIENT_BINANCE_S.new_margin_oco_order(
     symbol='BTCTUSD',
-    side='BUY',
-    type='LIMIT',
-    quantity=0.015,
-    price='28000',
-    timeInForce='GTC',
     isIsolated=True,
+    side='SELL',
+    quantity=0.018,
+    price=25000,
+    stopPrice=30000,
+    stopLimitPrice=20000,
+    sideEffectType='AUTO_REPAY',
+    # сверить со спотом и сделать как там + по доке, затем затестить
 )
 print(response)
