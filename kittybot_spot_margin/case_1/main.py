@@ -1,15 +1,15 @@
 import time
 
-from functions import get_logger
-from classes import TraderSpotMargin
-from constants import TRADER_NAME, TOKEN_NAME, CURRENCY, CLIENT_BINANCE_D
+from ..core.functions import get_logger
+from ..core.classes import TraderSpotMargin
+from .settings import TRADER_NAME, TOKEN_NAME, CURRENCY, CLIENT_BINANCE_S, COEF
 
 
 def main(bot):
     """Основная логика работы бота."""
     cur_depo = bot.get_balance()
     while True:
-        inlet_factor = bot.check_inlet_condition()  # Фактор входа, основанный на рандоме
+        inlet_factor = bot.check_inlet_condition()  # Фактор входа
         cur_price = bot.check_price()  # Проверяет текущую цену для проверки уровней
         level_factor = bot.check_level(cur_price)  # Фактор входа, основанный на уровнях
         bot.logger.debug(f'inlet_factor: {inlet_factor}, level_factor: {level_factor}')
@@ -38,6 +38,7 @@ if __name__ == "__main__":
         logger,
         TOKEN_NAME,
         CURRENCY,
-        CLIENT_BINANCE_D
+        CLIENT_BINANCE_S,
+        COEF,
     )
     main(kittybot)

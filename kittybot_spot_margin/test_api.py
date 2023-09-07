@@ -21,8 +21,13 @@ for tiker in tokens:
 print(tusd_value)
 
 """
-account = CLIENT_BINANCE_S.isolated_margin_account(symbols='BTCTUSD')
+# get_balance
+account = CLIENT_BINANCE_S.isolated_margin_account(symbols='BTCTUSD', recvWindow=RECVWINDOW)
 print(account)
+data = account['assets'][0]['quoteAsset']['free']
+print(data)
+
+
 # Лимитный маржин ордер
 # response = CLIENT_BINANCE_S.new_margin_order(
 #     symbol='BTCTUSD',
@@ -46,15 +51,19 @@ print(account)
 # )
 
 # Лимит ОСО ордер на продажу
-response = CLIENT_BINANCE_S.new_margin_oco_order(
-    symbol='BTCTUSD',
-    isIsolated=True,
-    side='SELL',
-    quantity=0.018,
-    price=25000,
-    stopPrice=30000,
-    stopLimitPrice=20000,
-    sideEffectType='AUTO_REPAY',
-    # сверить со спотом и сделать как там + по доке, затем затестить
-)
-print(response)
+# response = CLIENT_BINANCE_S.new_margin_oco_order(
+#     symbol='BTCTUSD',
+#     isIsolated=True,
+#     side='SELL',
+#     quantity=0.018,
+#     price=25785,
+#     stopPrice=22000,
+#     stopLimitPrice=21980,
+#     sideEffectType='AUTO_REPAY',
+#     stopLimitTimeInForce="GTC",
+#     recvWindow=RECVWINDOW,
+# )
+#print(response)
+
+
+#Сравнить response для обычного и маржинального ордера на покупку, можно ли оттуда брать те же данные в случае маржи
