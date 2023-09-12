@@ -40,11 +40,26 @@ print(data)
 #     isIsolated=True,
 #     side='BUY',
 #     type='LIMIT',
-#     quantity=0.0397,
-#     price='25000',
+#     quantity=0.001,
+#     price=25290,
 #     sideEffectType='MARGIN_BUY',
 #     timeInForce='GTC',
 # )
+# print(response)
+
+# Получаем ордер
+# pair = 'BTCTUSD'
+# order_id = response['orderId']
+# print(order_id)
+# order_info = CLIENT_BINANCE_S.margin_order(symbol=pair, orderId=order_id, isIsolated=True, recvWindow=RECVWINDOW)
+# print(f'order info : {order_info}')
+# order_status = order_info['status']
+# print('first try')
+# print(f'response: {response}\n'
+#       f'order_id: {order_id}\n'
+#       f'order_info: {order_info}\n'
+#       f'order_status: {order_status}')
+
 
 # Рыночный маржин ордер
 # response = CLIENT_BINANCE_S.new_margin_order(

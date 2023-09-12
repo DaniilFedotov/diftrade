@@ -82,12 +82,12 @@ class TraderSpotMargin(Trader):  # Класс для спотовой торго
         }
         response = self.client.new_margin_order(**params)  # Открывает лимитный ордер на покупку по указанной цене
         order_id = str(response['orderId'])
-        order_info = self.client.get_order(symbol=self.pair, orderId=order_id, recvWindow=RECVWINDOW)
+        order_info = self.client.margin_order(symbol=self.pair, orderId=order_id, recvWindow=RECVWINDOW)
         order_status = order_info['status']
         while order_status != 'FILLED':
             timer = self.get_timer(param='CHECK_T')
             time.sleep(timer)
-            order_info = self.client.get_order(self.pair, orderId=order_id, recvWindow=RECVWINDOW)
+            order_info = self.client.margin_order(self.pair, orderId=order_id, recvWindow=RECVWINDOW)
             order_status = order_info['status']
             message = (f'{self.name}: Проверено состояние ордера:'
                        f'{order_info}, status: {order_status}')
