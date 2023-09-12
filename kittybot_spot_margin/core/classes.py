@@ -73,18 +73,29 @@ class TraderSpotMargin(Trader):  # Класс для спотовой торго
             "symbol": self.pair,  # Тикер токена
             "isIsolated": True,
             "side": "BUY",  # Покупка
-            "type": "MARKET",  # Тип ордера - рыночный
+            "type": "LIMIT",  # Тип ордера - рыночный
             "quantity": quantity_for_btc,  # Количество. Другой вариант - quoteOrderQty
-            "sideEffectType": "MARGIN_BUY",
+            "price": cur_price,
+            "sideEffectType": "MARGIN_BUY",  # Автозаем
             "timeInForce": "GTC",
             "recvWindow": RECVWINDOW,
         }
-        response = self.client.new_margin_order(**params)  # Открывает ордер на покупку по рыночной цене
+        response = self.client.new_margin_order(**params)  # Открывает лимитный ордер на покупку по указанной цене
+        order_id = str(response['orderId'])
+        order_info = self.client.get_order(symbol=self.pair, orderId=order_id, recvWindow=RECVWINDOW)
+        order_status = order_info['status']
+        while order_status != 'FILLED':
+            timer = self.get_timer(param='CHECK_T')
+            time.sleep(timer)
+            order_info = self.client.get_order(self.pair, orderId=order_id, recvWindow=RECVWINDOW)
+            order_status = order_info['status']
+            message = (f'{self.name}: Проверено состояние ордера:'
+                       f'{order_info}, status: {order_status}')
+            self.logger.debug(message)
         message = (f'{self.name}: Куплено {response["origQty"]} {self.token} на сумму '
                    f'{response["cummulativeQuoteQty"]} {self.currency} по цене {response["fills"][0]["price"]}')
         self.logger.info(message)
         self.send_message(message)
-        # Проверить, в том же формате возврат или нет
         return response
 
     def sell_coin(self, buy_info):
@@ -96,17 +107,19 @@ class TraderSpotMargin(Trader):  # Класс для спотовой торго
         stop_limit = int(price * self.coefficients['STOP_LIMIT'])
         params = {
             "symbol": self.pair,  # Тикер токена
+            "isIsolated": True,
             "side": "SELL",  # Продажа
             "quantity": quantity,  # Количество монет
             "price": sell_price,  # Заданная цена
             "stopPrice": stop_price,  # Цена, при которой выставляется лимитная заявка на продажу по стопу
             "stopLimitPrice": stop_limit,  # Цена, по которой продается монета по стопу
+            "sideEffectType": 'AUTO_REPAY',  # Автопогашение
             "stopLimitTimeInForce": "GTC",
             "recvWindow": RECVWINDOW,  # Необходимо для предотвращения ошибки 1021
         }
-        response = self.client.new_oco_order(**params)  # Открывает ордер на продажу со стопом
-        stop_order_id = str((response['orders'][0]['orderId']))
-        limit_order_id = str((response['orders'][1]['orderId']))
+        response = self.client.new_margin_oco_order(**params)  # Открывает ордер на продажу со стопом
+        stop_order_id = str(response['orders'][0]['orderId'])
+        limit_order_id = str(response['orders'][1]['orderId'])
         stop_order_info = self.client.get_order(symbol=self.pair, orderId=stop_order_id, recvWindow=RECVWINDOW)
         limit_order_info = self.client.get_order(symbol=self.pair, orderId=limit_order_id, recvWindow=RECVWINDOW)
         stop_order_status = stop_order_info['status']

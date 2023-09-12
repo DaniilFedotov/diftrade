@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 from binance.spot import Spot
 
 
-TRADER_NAME = 'kittybot_spot'
+TRADER_NAME = 'kittybot_spot_margin'
 TOKEN_NAME = 'BTC'
 CURRENCY = 'TUSD'
 
