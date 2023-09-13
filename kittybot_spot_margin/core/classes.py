@@ -82,12 +82,20 @@ class TraderSpotMargin(Trader):  # Класс для спотовой торго
         }
         response = self.client.new_margin_order(**params)  # Открывает лимитный ордер на покупку по указанной цене
         order_id = str(response['orderId'])
-        order_info = self.client.margin_order(symbol=self.pair, orderId=order_id, recvWindow=RECVWINDOW)
+        order_info = self.client.margin_order(
+            symbol=self.pair,
+            orderId=order_id,
+            isIsolated=True,
+            recvWindow=RECVWINDOW)
         order_status = order_info['status']
         while order_status != 'FILLED':
             timer = self.get_timer(param='CHECK_T')
             time.sleep(timer)
-            order_info = self.client.margin_order(self.pair, orderId=order_id, recvWindow=RECVWINDOW)
+            order_info = self.client.margin_order(
+                symbol=self.pair,
+                orderId=order_id,
+                isIsolated=True,
+                recvWindow=RECVWINDOW)
             order_status = order_info['status']
             message = (f'{self.name}: Проверено состояние ордера:'
                        f'{order_info}, status: {order_status}')
@@ -120,15 +128,31 @@ class TraderSpotMargin(Trader):  # Класс для спотовой торго
         response = self.client.new_margin_oco_order(**params)  # Открывает ордер на продажу со стопом
         stop_order_id = str(response['orders'][0]['orderId'])
         limit_order_id = str(response['orders'][1]['orderId'])
-        stop_order_info = self.client.get_order(symbol=self.pair, orderId=stop_order_id, recvWindow=RECVWINDOW)
-        limit_order_info = self.client.get_order(symbol=self.pair, orderId=limit_order_id, recvWindow=RECVWINDOW)
+        stop_order_info = self.client.margin_order(
+            symbol=self.pair,
+            orderId=stop_order_id,
+            isIsolated=True,
+            recvWindow=RECVWINDOW)
+        limit_order_info = self.client.margin_order(
+            symbol=self.pair,
+            orderId=limit_order_id,
+            isIsolated=True,
+            recvWindow=RECVWINDOW)
         stop_order_status = stop_order_info['status']
         limit_order_status = limit_order_info['status']
         while stop_order_status != 'FILLED' and limit_order_status != 'FILLED':
             timer = self.get_timer(param='CHECK_T')
             time.sleep(timer)
-            stop_order_info = self.client.get_order(self.pair, orderId=stop_order_id, recvWindow=RECVWINDOW)
-            limit_order_info = self.client.get_order(self.pair, orderId=limit_order_id, recvWindow=RECVWINDOW)
+            stop_order_info = self.client.margin_order(
+                symbol=self.pair,
+                orderId=stop_order_id,
+                isIsolated=True,
+                recvWindow=RECVWINDOW)
+            limit_order_info = self.client.margin_order(
+                symbol=self.pair,
+                orderId=limit_order_id,
+                isIsolated=True,
+                recvWindow=RECVWINDOW)
             stop_order_status = stop_order_info['status']
             limit_order_status = limit_order_info['status']
             message = (f'{self.name}: Проверено состояние ордеров:'
