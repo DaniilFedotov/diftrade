@@ -15,6 +15,8 @@ def main(bot):
         bot.logger.debug(f'inlet_factor: {inlet_factor}, level_factor: {level_factor}')
         if inlet_factor and level_factor:  # Если оба фактора указывают на вход в сделку
             buy_info = bot.buy_coin(cur_depo, cur_price)
+            if buy_info == 'canceled':
+                break
             sell_info = None
             bot.logger.debug(f'buy_info: {buy_info}')
             if buy_info['status'] == 'FILLED':

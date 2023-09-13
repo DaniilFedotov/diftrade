@@ -28,10 +28,10 @@ print(tusd_value)
 
 """
 # get_balance
-account = CLIENT_BINANCE_S.isolated_margin_account(symbols='BTCTUSD', recvWindow=RECVWINDOW)
-print(account)
-data = account['assets'][0]['quoteAsset']['free']
-print(data)
+# account = CLIENT_BINANCE_S.isolated_margin_account(symbols='BTCTUSD', recvWindow=RECVWINDOW)
+# print(account)
+# data = account['assets'][0]['quoteAsset']['free']
+# print(data)
 
 
 # Лимитный маржин ордер
@@ -40,15 +40,32 @@ print(data)
 #     isIsolated=True,
 #     side='BUY',
 #     type='LIMIT',
-#     quantity=0.001,
-#     price=25290,
+#     quantity=0.0005,
+#     price=25940,
 #     sideEffectType='MARGIN_BUY',
 #     timeInForce='GTC',
 # )
 # print(response)
+# order_id = response['orderId']
+order_id = 3000911208
+# print(order_id)
+order_info = CLIENT_BINANCE_S.margin_order(symbol='BTCTUSD', orderId=order_id, isIsolated=True, recvWindow=RECVWINDOW)
+print(f'order info : {order_info}')
+trades = CLIENT_BINANCE_S.margin_my_trades(symbol='BTCTUSD', isIsolated=True, startTime=order_info["time"], recvWindow=RECVWINDOW)
+for trade in trades:
+    print(f'id: {trade["orderId"]}, commission:{trade["commission"]}, qty: {trade["qty"]}, time: {trade["time"]}')
+# print(f'trades: {trades}')
+
+# fills = response['fills']
+# for fill in fills:
+#     commission = float(fill['commission'])
+#     print(f'commission: {commission}')
+#     if commission != 0:
+#         print('остановили бота')
 
 # Получаем ордер
 # pair = 'BTCTUSD'
+# order_id = 2996554060
 # order_id = response['orderId']
 # print(order_id)
 # order_info = CLIENT_BINANCE_S.margin_order(symbol=pair, orderId=order_id, isIsolated=True, recvWindow=RECVWINDOW)

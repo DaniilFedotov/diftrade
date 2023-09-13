@@ -3,7 +3,8 @@ import time
 
 from telegram import TelegramError
 
-from .constants import LVL_C, VLT_C, BOT_TG, RECVWINDOW, TELEGRAM_CHAT_ID
+from .constants import (LVL_C, VLT_C, BOT_TG, RECVWINDOW, TELEGRAM_CHAT_ID,
+                        TIMEDELTA_COMMISSION, SLEEPTIME_COMMISSION, PRICE_DELTA_BTC)
 
 
 class Trader:  # Родительский класс для торговых ботов
@@ -58,6 +59,23 @@ class TraderSpotMargin(Trader):  # Класс для спотовой торго
         random_factor = randint(1, int(self.coefficients['INLET']))  # Фактор входа, основанный на рандоме
         return random_factor == int(self.coefficients['INLET'])  # True/False
 
+    def check_commission(self):
+        """Проверяет размер комиссии для сделок, совершенных в течение заданного промежутка времени."""
+        now_timestamp = int(time.time())
+        trades = self.client.margin_my_trades(
+            symbol=self.pair,
+            isIsolated=True,
+            startTime=now_timestamp-TIMEDELTA_COMMISSION,
+            recvWindow=RECVWINDOW)
+        for trade in trades:
+            if trade['commission'] != 0:
+                message = f'{self.name}: Комиссия не нулевая!'
+                self.logger.error(message)
+                self.send_message(message)
+                time.sleep(SLEEPTIME_COMMISSION)
+        message = f'{self.name}: Комиссия нулевая.'
+        self.logger.error(message)
+
     def buy_coin(self, cur_depo, cur_price):
         """Выставляет рыночный ордер на покупку монеты."""
         try:
@@ -75,20 +93,14 @@ class TraderSpotMargin(Trader):  # Класс для спотовой торго
             "side": "BUY",  # Покупка
             "type": "LIMIT",  # Тип ордера - рыночный
             "quantity": quantity_for_btc,  # Количество. Другой вариант - quoteOrderQty
-            "price": cur_price,
+            "price": cur_price - PRICE_DELTA_BTC,
             "sideEffectType": "MARGIN_BUY",  # Автозаем
             "timeInForce": "GTC",
             "recvWindow": RECVWINDOW,
         }
         response = self.client.new_margin_order(**params)  # Открывает лимитный ордер на покупку по указанной цене
         order_id = str(response['orderId'])
-        order_info = self.client.margin_order(
-            symbol=self.pair,
-            orderId=order_id,
-            isIsolated=True,
-            recvWindow=RECVWINDOW)
-        order_status = order_info['status']
-        while order_status != 'FILLED':
+        while True:
             timer = self.get_timer(param='CHECK_T')
             time.sleep(timer)
             order_info = self.client.margin_order(
@@ -100,11 +112,15 @@ class TraderSpotMargin(Trader):  # Класс для спотовой торго
             message = (f'{self.name}: Проверено состояние ордера:'
                        f'{order_info}, status: {order_status}')
             self.logger.debug(message)
-        message = (f'{self.name}: Куплено {response["origQty"]} {self.token} на сумму '
-                   f'{response["cummulativeQuoteQty"]} {self.currency} по цене {response["fills"][0]["price"]}')
-        self.logger.info(message)
-        self.send_message(message)
-        return response
+            if order_status == 'FILLED':
+                self.check_commission()
+                message = (f'{self.name}: Куплено {order_info["origQty"]} {self.token} на сумму '
+                           f'{order_info["cummulativeQuoteQty"]} {self.currency} по цене {order_info["price"]}')
+                self.logger.info(message)
+                self.send_message(message)
+                return order_info
+            elif order_status == 'CANCELED':
+                return 'canceled'
 
     def sell_coin(self, buy_info):
         """Выставляет ОСО ордер на продажу монеты по заданной цене."""

@@ -54,5 +54,11 @@ VLT_C = {  # VOLATILITY COEFFICIENTS, коэф-ты для проверки во
 
 RECVWINDOW = 59000
 
+PRICE_DELTA_BTC = 2  # То, на сколько уменьшается цена покупки для выполнения ордера в режиме MAKER
+
+TIMEDELTA_COMMISSION = 3600  # Промежуток в секундах для отслеживания комиссии
+
+SLEEPTIME_COMMISSION = 360000  # Время сна в секундах в случае ненулевой комиссии
+
 BOT_TG = Bot(token=TELEGRAM_TOKEN)  # Регистрируем Telegram-бота
 
