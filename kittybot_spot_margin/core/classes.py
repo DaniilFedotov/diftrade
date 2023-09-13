@@ -52,6 +52,8 @@ class TraderSpotMargin(Trader):  # Класс для спотовой торго
         """Показывает количество запрошенной монеты на аккаунте."""
         self.logger.debug(f'{self.name}: Проверил баланс {self.currency}')
         data = self.client.isolated_margin_account(symbols=self.pair, recvWindow=RECVWINDOW)
+        balance = float(data['assets'][0]['quoteAsset']['free'])
+        self.logger.debug(f'{self.name}: Баланс составляет {balance} {self.currency}')
         return float(data['assets'][0]['quoteAsset']['free'])
 
     def check_inlet_condition(self):
@@ -94,12 +96,14 @@ class TraderSpotMargin(Trader):  # Класс для спотовой торго
             "type": "LIMIT",  # Тип ордера - рыночный
             "quantity": quantity_for_btc,  # Количество. Другой вариант - quoteOrderQty
             "price": cur_price - PRICE_DELTA_BTC,
-            "sideEffectType": "MARGIN_BUY",  # Автозаем
+            #"sideEffectType": "MARGIN_BUY",  # Автозаем
             "timeInForce": "GTC",
             "recvWindow": RECVWINDOW,
         }
         response = self.client.new_margin_order(**params)  # Открывает лимитный ордер на покупку по указанной цене
         order_id = str(response['orderId'])
+        message = f'{self.name}: Открыт лимитный ордер на покупку. order_id: {order_id}'
+        self.logger.error(message)
         while True:
             timer = self.get_timer(param='CHECK_T')
             time.sleep(timer)
