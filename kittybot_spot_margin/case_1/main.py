@@ -16,19 +16,18 @@ def main(bot):
         if inlet_factor and level_factor:  # Если оба фактора указывают на вход в сделку
             buy_info = bot.buy_coin(cur_depo, cur_price)
             if buy_info == 'canceled':
-                break
-            sell_info = None
+                continue
             bot.logger.debug(f'buy_info: {buy_info}')
             if buy_info['status'] == 'FILLED':
                 sell_info = bot.sell_coin(buy_info)
                 bot.logger.debug(f'sell_info: {sell_info}')
-            profit = float(sell_info['cummulativeQuoteQty']) - float(buy_info['cummulativeQuoteQty'])
-            message = (f'{bot.name}: Сделка закрыта, заработок: '
-                       f'{profit} {bot.currency} '
-                       f'Текущий депозит (ориентировочно): {sell_info["cummulativeQuoteQty"]} {bot.currency}')
-            cur_depo = sell_info["cummulativeQuoteQty"]
-            bot.logger.info(message)
-            bot.send_message(message)
+                profit = float(sell_info['cummulativeQuoteQty']) - float(buy_info['cummulativeQuoteQty'])
+                message = (f'{bot.name}: Сделка закрыта, заработок: '
+                           f'{profit} {bot.currency} '
+                           f'Текущий депозит (ориентировочно): {sell_info["cummulativeQuoteQty"]} {bot.currency}')
+                cur_depo = sell_info["cummulativeQuoteQty"]
+                bot.logger.info(message)
+                bot.send_message(message)
         timer = bot.get_timer(param='SEARCH')
         time.sleep(timer)
 
