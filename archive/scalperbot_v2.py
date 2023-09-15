@@ -3,8 +3,8 @@ from random import randint
 
 import logging
 
-from functions import (VERSIONS, COEF, check_level, check_price, get_logger,
-                       buy_coin, sell_coin, get_timer, send_message, get_balance)
+from archive.functions import (VERSIONS, COEF, check_level, check_price, get_logger,
+                               buy_coin, sell_coin, get_timer, send_message, get_balance)
 
 
 VERSION = VERSIONS[1]  # Выбираем версию бота
