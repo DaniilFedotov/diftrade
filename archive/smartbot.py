@@ -44,7 +44,7 @@ updater = Updater(token=TELEGRAM_TOKEN)
 def sleep(update, context):
     chat = update.effective_chat
     context.bot.send_message(chat_id=chat.id,
-                             text=f'Мяу! Пока! {TRADER_VERSION} ушел.')
+                             text=f'Бот {TRADER_VERSION} деактивирован.')
     sys.exit()
 
 
@@ -130,7 +130,7 @@ def main():
                         current_price,
                         deal_info)
                 time.sleep(TIME_STEP_CHECK)
-            message = (f'{TRADER_VERSION}: Сделка закрыта, зароботок: '
+            message = (f'{TRADER_VERSION}: Сделка закрыта, заработок: '
                        f'{deal_info["profit"]} USDT '
                        f'Текущий депозит: {deposit_info["USDT_DEPO"]} USDT')
             logger.debug(message)

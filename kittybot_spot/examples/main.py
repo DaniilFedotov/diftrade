@@ -2,7 +2,7 @@ import time
 
 from functions import get_logger
 from classes import TraderSpot
-from constants import TRADER_NAME, TOKEN_NAME, CURRENCY, CLIENT_BINANCE_D
+from constants import TRADER_NAME, TOKEN_NAME, CURRENCY, CLIENT_BINANCE_F
 
 
 def main(bot):
@@ -33,11 +33,11 @@ def main(bot):
 
 if __name__ == "__main__":
     logger = get_logger(TRADER_NAME)  # Получает логгер
-    kittybot = TraderSpot(
+    trader_bot = TraderSpot(
         TRADER_NAME,
         logger,
         TOKEN_NAME,
         CURRENCY,
-        CLIENT_BINANCE_D
+        CLIENT_BINANCE_F
     )
-    main(kittybot)
+    main(trader_bot)

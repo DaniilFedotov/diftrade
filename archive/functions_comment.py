@@ -10,7 +10,7 @@ from telegram import TelegramError, Bot
 from binance.spot import Spot
 
 
-VERSIONS = ['Trader_sdk', 'Scalper_sdk', 'Smart_sdk']  # Различные версии бота с отличющимися стратегиями входа и торгов
+VERSIONS = ['Trader_sdk', 'Scalper_sdk', 'Smart_sdk']  # Различные версии бота
 COEF = {VERSIONS[0]: {'INLET': 0.9992,
                       'OUTLET': 1.0008,
                       'STOP': 0.98,

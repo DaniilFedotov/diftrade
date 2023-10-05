@@ -33,11 +33,11 @@ def main(bot):
 
 if __name__ == "__main__":
     logger = get_logger(TRADER_NAME)  # Получает логгер
-    kittybot = TraderSpotOld(
+    trader_bot = TraderSpotOld(
         TRADER_NAME,
         logger,
         TOKEN_NAME,
         CURRENCY,
         CLIENT_BINANCE_S
     )
-    main(kittybot)
+    main(trader_bot)

@@ -7,13 +7,13 @@ from binance.spot import Spot
 
 load_dotenv()  # Загружает секретные ключи
 
-BINANCE_TOKEN_S = os.getenv('BINANCE_TOKEN_S')  # Ключ для S
-BINANCE_KEY_S = os.getenv('BINANCE_SECRET_KEY_S')  # Ключ для S
-CLIENT_BINANCE_S = Spot(api_key=BINANCE_TOKEN_S, api_secret=BINANCE_KEY_S)  # Регистрируем клиента для API-binance
+BINANCE_TOKEN_S = os.getenv('BINANCE_TOKEN_SECOND')  # Токен для API-binance
+BINANCE_KEY_S = os.getenv('BINANCE_SECRET_KEY_SECOND')  # Ключ для API-binance
+CLIENT_BINANCE_S = Spot(api_key=BINANCE_TOKEN_S, api_secret=BINANCE_KEY_S)  # Регистрация клиента API-binance
 """
-BINANCE_TOKEN_D = os.getenv('BINANCE_TOKEN_D')  # Токен для D
-BINANCE_KEY_D = os.getenv('BINANCE_SECRET_KEY_D')  # Ключ для D
-CLIENT_BINANCE_D = Spot(api_key=BINANCE_TOKEN_D, api_secret=BINANCE_KEY_D)
+BINANCE_TOKEN_F = os.getenv('BINANCE_TOKEN_FIRST')  # Токен для API-binance
+BINANCE_KEY_F = os.getenv('BINANCE_SECRET_KEY_FIRST')  # Ключ для API-binance
+CLIENT_BINANCE_F = Spot(api_key=BINANCE_TOKEN_F, api_secret=BINANCE_KEY_F)
 """
 
 
@@ -102,7 +102,7 @@ for trade in trades:
 #     "type": "MARKET",  # Тип ордера - рыночный
 #     "quantity": 0.001,  # Количество. Другой вариант - quoteOrderQty
 # }
-# response2 = CLIENT_BINANCE_D.new_order(**params)  # Открывает ордер на покупку по рыночной цене
+# response2 = CLIENT_BINANCE_F.new_order(**params)  # Открывает ордер на покупку по рыночной цене
 # print(f'response через маржу: {response}'
 #       f'response через спот: {response2}')
 

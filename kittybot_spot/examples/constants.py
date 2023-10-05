@@ -5,7 +5,7 @@ from telegram import Bot
 from binance.spot import Spot
 
 
-TRADER_NAME = 'kittybot_spot'
+TRADER_NAME = 'bot_spot'
 TOKEN_NAME = 'BTC'
 CURRENCY = 'TUSD'
 
@@ -17,10 +17,10 @@ COEF = {'INLET': 2,
 
 load_dotenv()  # Загружает секретные ключи
 
-BINANCE_TOKEN_D = os.getenv('BINANCE_TOKEN_D')  # Токен для D
-BINANCE_KEY_D = os.getenv('BINANCE_SECRET_KEY_D')  # Ключ для D
-BINANCE_TOKEN_S = os.getenv('BINANCE_TOKEN_S')  # Ключ для S
-BINANCE_KEY_S = os.getenv('BINANCE_SECRET_KEY_S')  # Ключ для S
+BINANCE_TOKEN_F = os.getenv('BINANCE_TOKEN_FIRST')  # Токен для API-binance
+BINANCE_KEY_F = os.getenv('BINANCE_SECRET_KEY_FIRST')  # Ключ для API-binance
+BINANCE_TOKEN_S = os.getenv('BINANCE_TOKEN_SECOND')  # Токен для API-binance
+BINANCE_KEY_S = os.getenv('BINANCE_SECRET_KEY_SECOND')  # Ключ для API-binance
 
 TELEGRAM_TOKEN = os.getenv('TELEGRAM_TOKEN')  # Токен для управления ботом
 TELEGRAM_CHAT_ID = os.getenv('TELEGRAM_CHAT_ID')  # ID чата, в который требуется отправка сообщений
@@ -73,4 +73,4 @@ RECVWINDOW = 59000
 BOT_TG = Bot(token=TELEGRAM_TOKEN)  # Регистрируем Telegram-бота
 
 CLIENT_BINANCE_S = Spot(api_key=BINANCE_TOKEN_S, api_secret=BINANCE_KEY_S)  # Регистрируем клиента для API-binance
-CLIENT_BINANCE_D = Spot(api_key=BINANCE_TOKEN_D, api_secret=BINANCE_KEY_D)
+CLIENT_BINANCE_F = Spot(api_key=BINANCE_TOKEN_F, api_secret=BINANCE_KEY_F)

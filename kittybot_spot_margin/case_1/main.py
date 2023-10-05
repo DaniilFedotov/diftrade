@@ -34,7 +34,7 @@ def main(bot):
 
 if __name__ == "__main__":
     logger = get_logger(TRADER_NAME)  # Получает логгер
-    kittybot = TraderSpotMargin(
+    trader_bot = TraderSpotMargin(
         TRADER_NAME,
         logger,
         TOKEN_NAME,
@@ -42,4 +42,4 @@ if __name__ == "__main__":
         CLIENT_BINANCE_S,
         COEF,
     )
-    main(kittybot)
+    main(trader_bot)

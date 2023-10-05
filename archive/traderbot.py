@@ -65,9 +65,9 @@ updater = Updater(token=TELEGRAM_TOKEN)
 def sleep(update, context, version):
     """Отправляет бота в спячку."""
     chat = update.effective_chat
-    logger.info(f'{version}: Бот ушел спать')
+    logger.info(f'{version}: Бот деактивирован.')
     context.bot.send_message(chat_id=chat.id,
-                             text=f'Мяу! Пока! {version} ушел.')
+                             text=f'Бот деактивирован.')
     sys.exit()
 
 
