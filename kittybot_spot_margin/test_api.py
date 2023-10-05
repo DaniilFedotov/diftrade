@@ -1,4 +1,5 @@
 import os
+import time
 
 from dotenv import load_dotenv
 
@@ -47,11 +48,17 @@ print(tusd_value)
 # )
 # print(response)
 # order_id = response['orderId']
+print(f'timestamp: {time.time()}')
 order_id = 3000911208
 # print(order_id)
 order_info = CLIENT_BINANCE_S.margin_order(symbol='BTCTUSD', orderId=order_id, isIsolated=True, recvWindow=RECVWINDOW)
 print(f'order info : {order_info}')
-trades = CLIENT_BINANCE_S.margin_my_trades(symbol='BTCTUSD', isIsolated=True, startTime=order_info["time"], recvWindow=RECVWINDOW)
+print(f'ordertime: {order_info["time"]}')
+trades = CLIENT_BINANCE_S.margin_my_trades(
+    symbol='BTCTUSD',
+    isIsolated=True,
+    #startTime=order_info["time"],
+    recvWindow=RECVWINDOW)
 for trade in trades:
     print(f'id: {trade["orderId"]}, commission:{trade["commission"]}, qty: {trade["qty"]}, time: {trade["time"]}')
 # print(f'trades: {trades}')

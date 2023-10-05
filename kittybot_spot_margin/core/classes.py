@@ -4,7 +4,8 @@ import time
 from telegram import TelegramError
 
 from .constants import (LVL_C, VLT_C, BOT_TG, RECVWINDOW, TELEGRAM_CHAT_ID,
-                        TIMEDELTA_COMMISSION, SLEEPTIME_COMMISSION, PRICE_DELTA_BTC)
+                        TIMEDELTA_COMMISSION, SLEEPTIME_COMMISSION, PRICE_DELTA_BTC,
+                        BUY_ORDER_LIFETIME)
 
 
 class Trader:  # Родительский класс для торговых ботов
@@ -39,7 +40,8 @@ class Trader:  # Родительский класс для торговых б�
 
     def get_timer(self, param):
         """Определяет время следующего запроса к API в зависимости от исхода."""
-        self.logger.debug(f'{self.name}: Определил время следующего запроса')
+        self.logger.debug(f'{self.name}: Определил время следующего запроса\n'
+                          f'-----------------------------------------------')
         if param == 'STOP':
             return 150 * 60
         elif param == 'SEARCH':
@@ -51,7 +53,7 @@ class TraderSpotMargin(Trader):  # Класс для спотовой торго
     def get_balance(self):
         """Показывает количество запрошенной монеты на аккаунте."""
         self.logger.debug(f'{self.name}: Проверил баланс {self.currency}')
-        data = self.client.isolated_margin_account(symbols=self.pair, recvWindow=RECVWINDOW)
+        data = self.client.isolated_margin_account(symbols=self.pair)
         balance = float(data['assets'][0]['quoteAsset']['free'])
         self.logger.debug(f'{self.name}: Баланс составляет {balance} {self.currency}')
         return float(data['assets'][0]['quoteAsset']['free'])
@@ -63,20 +65,20 @@ class TraderSpotMargin(Trader):  # Класс для спотовой торго
 
     def check_commission(self):
         """Проверяет размер комиссии для сделок, совершенных в течение заданного промежутка времени."""
-        now_timestamp = int(time.time())
+        now_timestamp = int(time.time()) * 1000  # Для приведения к формату binance
         trades = self.client.margin_my_trades(
             symbol=self.pair,
             isIsolated=True,
             startTime=now_timestamp-TIMEDELTA_COMMISSION,
             recvWindow=RECVWINDOW)
         for trade in trades:
-            if trade['commission'] != 0:
+            if float(trade['commission']) != 0:
                 message = f'{self.name}: Комиссия не нулевая!'
                 self.logger.error(message)
                 self.send_message(message)
                 time.sleep(SLEEPTIME_COMMISSION)
         message = f'{self.name}: Комиссия нулевая.'
-        self.logger.error(message)
+        self.logger.debug(message)
 
     def buy_coin(self, cur_depo, cur_price):
         """Выставляет рыночный ордер на покупку монеты."""
@@ -103,7 +105,7 @@ class TraderSpotMargin(Trader):  # Класс для спотовой торго
         response = self.client.new_margin_order(**params)  # Открывает лимитный ордер на покупку по указанной цене
         order_id = str(response['orderId'])
         message = f'{self.name}: Открыт лимитный ордер на покупку. order_id: {order_id}'
-        self.logger.error(message)
+        self.logger.debug(message)
         while True:
             timer = self.get_timer(param='CHECK_T')
             time.sleep(timer)
@@ -124,7 +126,19 @@ class TraderSpotMargin(Trader):  # Класс для спотовой торго
                 self.send_message(message)
                 return order_info
             elif order_status == 'CANCELED':
+                self.logger.info('Ордер отменен не программным путем.')
                 return 'canceled'
+            elif order_status == 'NEW':
+                now_timestamp = int(time.time()) * 1000
+                order_time = order_info['time']
+                if now_timestamp - order_time >= BUY_ORDER_LIFETIME:
+                    self.client.cancel_margin_order(
+                        symbol=self.pair,
+                        orderId=order_id,
+                        isIsolated=True,
+                        recvwindow=RECVWINDOW)
+                    self.logger.info('Ордер отменен программным путем.')
+                    return 'canceled'
 
     def sell_coin(self, buy_info):
         """Выставляет ОСО ордер на продажу монеты по заданной цене."""
@@ -178,7 +192,7 @@ class TraderSpotMargin(Trader):  # Класс для спотовой торго
             message = (f'{self.name}: Проверено состояние ордеров:'
                        f'{stop_order_info}, status: {stop_order_status},'
                        f'{limit_order_info}, status: {limit_order_status},')
-            self.logger.debug(message)
+            #self.logger.debug(message)
         if stop_order_status == 'FILLED':
             order_info = stop_order_info
             message = f'{self.name}: Продано по стопу'
@@ -192,7 +206,7 @@ class TraderSpotMargin(Trader):  # Класс для спотовой торго
         else:
             order_info = response
             message = f'{self.name}: Непонятная ошибка со статусами ордеров'
-            self.logger.info(message)
+            self.logger.error(message)
             self.send_message(message)
             timer = self.get_timer(param='STOP')
             time.sleep(timer)
