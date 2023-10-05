@@ -8,7 +8,7 @@ TRADER_NAME = 'bot_spot_margin'
 TOKEN_NAME = 'BTC'
 CURRENCY = 'TUSD'
 
-COEF = {'MARGIN_RATIO': 0.1,  # 1:обычный режим. 1-5:плечо. (0.1 для тестирования)
+COEF = {'MARGIN_RATIO': 0.1,  # 0.1: Режим для тестирования. 1:Обычный режим. 1-5:Плечо от 1 до 5.
         'INLET': 2,
         'OUTLET': 1.0005,
         'STOP': 0.985,
