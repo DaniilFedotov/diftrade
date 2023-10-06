@@ -11,12 +11,12 @@
 Проект является учебным и не подразумевает использования в режиме торговли.
 
 ### Как настроить проект
-Клонировать репозиторий и перейти в папку GD_MN:
+Клонировать репозиторий и перейти в папку diftrade:
 ```sh
-git clone https://github.com/DaniilFedotov/GD_MN.git
+git clone https://github.com/DaniilFedotov/diftrade.git
 ```
 ```sh
-cd GD_MN/
+cd diftrade/
 ```
 
 Создать и активировать виртуальное окружение:
