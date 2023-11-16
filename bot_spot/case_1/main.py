@@ -28,14 +28,14 @@ def main(bot):
                        f'{profit} {bot.currency} '
                        f'Текущий депозит (ориентировочно): '
                        f'{sell_info["cummulativeQuoteQty"]} {bot.currency}')
-            cur_depo = sell_info["cummulativeQuoteQty"]
+            cur_depo = sell_info['cummulativeQuoteQty']
             bot.logger.info(message)
             bot.send_message(message)
         timer = bot.get_timer(param='SEARCH')
         time.sleep(timer)
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     logger = get_logger(TRADER_NAME)  # Получает логгер
     trader_bot = TraderSpotOld(
         TRADER_NAME,

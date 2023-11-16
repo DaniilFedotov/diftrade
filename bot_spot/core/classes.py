@@ -18,7 +18,7 @@ class Trader:  # Родительский класс для торговых б�
     def check_price(self):
         """Проверяет цену монеты."""
         try:
-            price = float(self.client.ticker_price(self.pair)["price"])
+            price = float(self.client.ticker_price(self.pair)['price'])
             self.logger.debug(
                 f'{self.name}: Цена проверена: {price} {self.currency}')
             return price
@@ -55,7 +55,7 @@ class TraderSpot(Trader):
     def get_balance(self):
         """Показывает количество запрошенной монеты на аккаунте."""
         self.logger.debug(f'{self.name}: Проверил баланс {self.currency}')
-        all_tokens = self.client.account()["balances"]
+        all_tokens = self.client.account()['balances']
         for token in all_tokens:
             if token['asset'] == self.currency:
                 return float(token['free'])
@@ -80,11 +80,11 @@ class TraderSpot(Trader):
         # Обрезает кол-во монет под нужный формат
         quantity_for_btc = quantity // 0.00001 / 100000
         params = {
-            "symbol": self.pair,
-            "side": "BUY",
-            "type": "MARKET",
+            'symbol': self.pair,
+            'side': 'BUY',
+            'type': 'MARKET',
             # Количество. Другой вариант - quoteOrderQty
-            "quantity": quantity_for_btc,
+            'quantity': quantity_for_btc,
         }
         # Открывает ордер на покупку по рыночной цене
         response = self.client.new_order(**params)
@@ -104,17 +104,17 @@ class TraderSpot(Trader):
         stop_price = int(price * COEF['STOP'])
         stop_limit = int(price * COEF['STOP_LIMIT'])
         params = {
-            "symbol": self.pair,
-            "side": "SELL",
-            "quantity": quantity,
-            "price": sell_price,
+            'symbol': self.pair,
+            'side': 'SELL',
+            'quantity': quantity,
+            'price': sell_price,
             # Цена, при которой выставляется лимитная заявка на продажу по стоп
-            "stopPrice": stop_price,
+            'stopPrice': stop_price,
             # Цена, по которой продается монета по стопу
-            "stopLimitPrice": stop_limit,
-            "stopLimitTimeInForce": "GTC",
+            'stopLimitPrice': stop_limit,
+            'stopLimitTimeInForce': 'GTC',
             # Необходимо для предотвращения ошибки 1021
-            "recvWindow": RECVWINDOW,
+            'recvWindow': RECVWINDOW,
         }
         # Открывает ордер на продажу со стопом
         response = self.client.new_oco_order(**params)
@@ -246,7 +246,7 @@ class TraderSpotOld(Trader):
     def get_balance(self):
         """Показывает количество запрошенной монеты на аккаунте."""
         self.logger.debug(f'{self.name}: Проверил баланс {self.currency}')
-        all_tokens = self.client.account()["balances"]
+        all_tokens = self.client.account()['balances']
         for token in all_tokens:
             if token['asset'] == self.currency:  # Для указанного тикера
                 return float(token['free'])
@@ -270,11 +270,11 @@ class TraderSpotOld(Trader):
         # Обрезает кол-во монет под нужный формат
         quantity_for_btc = quantity // 0.00001 / 100000
         params = {
-            "symbol": self.pair,
-            "side": "BUY",
-            "type": "MARKET",
+            'symbol': self.pair,
+            'side': 'BUY',
+            'type': 'MARKET',
             # Сумма TUSD на ордер
-            "quantity": quantity_for_btc,
+            'quantity': quantity_for_btc,
         }
         # Открывает ордер на покупку по рыночной цене
         response = self.client.new_order(**params)
@@ -293,18 +293,18 @@ class TraderSpotOld(Trader):
         stop_price = int(price * COEF['STOP'])
         stop_limit = int(price * COEF['STOP_LIMIT'])
         params = {
-            "symbol": self.pair,
-            "side": "SELL",
-            "quantity": quantity,
-            "price": sell_price,
+            'symbol': self.pair,
+            'side': 'SELL',
+            'quantity': quantity,
+            'price': sell_price,
             # Цена, при которой выставляется лимитная заявка
             # на продажу по стопу
-            "stopPrice": stop_price,
+            'stopPrice': stop_price,
             # Цена, по которой продается монета по стопу
-            "stopLimitPrice": stop_limit,
-            "stopLimitTimeInForce": "GTC",
+            'stopLimitPrice': stop_limit,
+            'stopLimitTimeInForce': 'GTC',
             # Необходимо для предотвращения ошибки 1021
-            "recvWindow": RECVWINDOW,
+            'recvWindow': RECVWINDOW,
         }
         # Открывает ордер на продажу со стопом
         response = self.client.new_oco_order(**params)
