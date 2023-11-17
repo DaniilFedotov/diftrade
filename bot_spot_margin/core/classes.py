@@ -4,8 +4,8 @@ import time
 from telegram import TelegramError
 
 from .constants import (LVL_C, VLT_C, BOT_TG, RECVWINDOW, TELEGRAM_CHAT_ID,
-                        TIMEDELTA_COMMISSION, SLEEPTIME_COMMISSION, PRICE_DELTA_BTC,
-                        BUY_ORDER_LIFETIME)
+                        TIMEDELTA_COMMISSION, SLEEPTIME_COMMISSION,
+                        PRICE_DELTA_BTC, BUY_ORDER_LIFETIME)
 
 
 class Trader:  # Родительский класс для торговых ботов
@@ -21,8 +21,9 @@ class Trader:  # Родительский класс для торговых б�
     def check_price(self):
         """Проверяет цену монеты."""
         try:
-            price = float(self.client.ticker_price(self.pair)["price"])  # Получает цену токена
-            self.logger.debug(f'{self.name}: Цена проверена: {price} {self.currency}')
+            price = float(self.client.ticker_price(self.pair)['price'])
+            self.logger.debug(
+                f'{self.name}: Цена проверена: {price} {self.currency}')
             return price
         except Exception as error:
             message = f'Ошибка при проверке цены: {error}'
@@ -33,13 +34,17 @@ class Trader:  # Родительский класс для торговых б�
     def send_message(self, message):
         """Отправляет сообщение в Telegram чат."""
         try:
-            BOT_TG.send_message(TELEGRAM_CHAT_ID, message)  # Бот отправляет сообщение в телеграм по указанному ID
-            self.logger.debug(f'Сообщение в Telegram отправлено: {message}')
+            BOT_TG.send_message(TELEGRAM_CHAT_ID, message)
+            self.logger.debug(
+                f'Сообщение в Telegram отправлено: {message}')
         except TelegramError:
-            self.logger.error(f'Сбой при отправке сообщения в Telegram: {message}')
+            self.logger.error(
+                f'Сбой при отправке сообщения в Telegram: {message}')
 
     def get_timer(self, param):
-        """Определяет время следующего запроса к API в зависимости от исхода."""
+        """Определяет время следующего запроса к API
+        в зависимости от исхода.
+        """
         self.logger.debug(f'{self.name}: Определил время следующего запроса\n'
                           f'-----------------------------------------------')
         if param == 'STOP':
@@ -55,17 +60,21 @@ class TraderSpotMargin(Trader):  # Класс для спотовой торго
         self.logger.debug(f'{self.name}: Проверил баланс {self.currency}')
         data = self.client.isolated_margin_account(symbols=self.pair)
         balance = float(data['assets'][0]['quoteAsset']['free'])
-        self.logger.debug(f'{self.name}: Баланс составляет {balance} {self.currency}')
+        self.logger.debug(f'{self.name}: Баланс составляет '
+                          f'{balance} {self.currency}')
         return float(data['assets'][0]['quoteAsset']['free'])
 
     def check_inlet_condition(self):
         """Проверяет условие для входа, зависящее от версии бота."""
-        random_factor = randint(1, int(self.coefficients['INLET']))  # Фактор входа, основанный на рандоме
-        return random_factor == int(self.coefficients['INLET'])  # True/False
+        random_factor = randint(1, int(self.coefficients['INLET']))
+        return random_factor == int(self.coefficients['INLET'])
 
     def check_commission(self):
-        """Проверяет размер комиссии для сделок, совершенных в течение заданного промежутка времени."""
-        now_timestamp = int(time.time()) * 1000  # Для приведения к формату binance
+        """Проверяет размер комиссии для сделок,
+        совершенных в течение заданного промежутка времени.
+        """
+        # Приводит к формату binance
+        now_timestamp = int(time.time()) * 1000
         trades = self.client.margin_my_trades(
             symbol=self.pair,
             isIsolated=True,
@@ -86,25 +95,31 @@ class TraderSpotMargin(Trader):  # Класс для спотовой торго
             quote = self.get_balance()
         except Exception:
             quote = cur_depo
-            message = f'{self.name}: Баланс принят равным: {cur_depo} {self.currency}(Искл)'
+            message = (f'{self.name}: Баланс принят равным: '
+                       f'{cur_depo} {self.currency}(Искл)')
             self.logger.error(message)
             self.send_message(message)
         quantity = quote * self.coefficients['MARGIN_RATIO'] / cur_price
-        quantity_for_btc = quantity // 0.00001 / 100000  # Обрезает кол-во монет под нужный формат
+        # Обрезает кол-во монет под нужный формат
+        quantity_for_btc = quantity // 0.00001 / 100000
         params = {
-            "symbol": self.pair,  # Тикер токена
-            "isIsolated": True,
-            "side": "BUY",  # Покупка
-            "type": "LIMIT",  # Тип ордера - рыночный
-            "quantity": quantity_for_btc,  # Количество. Другой вариант - quoteOrderQty
-            "price": cur_price - PRICE_DELTA_BTC,
-            #"sideEffectType": "MARGIN_BUY",  # Автозаем
-            "timeInForce": "GTC",
-            "recvWindow": RECVWINDOW,
+            'symbol': self.pair,
+            'isIsolated': True,
+            'side': 'BUY',
+            'type': 'LIMIT',
+            # Количество. Другой вариант - quoteOrderQty
+            'quantity': quantity_for_btc,
+            'price': cur_price - PRICE_DELTA_BTC,
+            # Автозаем
+            # 'sideEffectType': 'MARGIN_BUY',
+            'timeInForce': 'GTC',
+            'recvWindow': RECVWINDOW,
         }
-        response = self.client.new_margin_order(**params)  # Открывает лимитный ордер на покупку по указанной цене
+        # Открывает лимитный ордер на покупку по указанной цене
+        response = self.client.new_margin_order(**params)
         order_id = str(response['orderId'])
-        message = f'{self.name}: Открыт лимитный ордер на покупку. order_id: {order_id}'
+        message = (f'{self.name}: Открыт лимитный ордер на покупку. '
+                   f'order_id: {order_id}')
         self.logger.debug(message)
         while True:
             timer = self.get_timer(param='CHECK_T')
@@ -120,8 +135,10 @@ class TraderSpotMargin(Trader):  # Класс для спотовой торго
             self.logger.debug(message)
             if order_status == 'FILLED':
                 self.check_commission()
-                message = (f'{self.name}: Куплено {order_info["origQty"]} {self.token} на сумму '
-                           f'{order_info["cummulativeQuoteQty"]} {self.currency} по цене {order_info["price"]}')
+                message = (f'{self.name}: Куплено {order_info["origQty"]} '
+                           f'{self.token} на сумму '
+                           f'{order_info["cummulativeQuoteQty"]} '
+                           f'{self.currency} по цене {order_info["price"]}')
                 self.logger.info(message)
                 self.send_message(message)
                 return order_info
@@ -148,18 +165,23 @@ class TraderSpotMargin(Trader):  # Класс для спотовой торго
         stop_price = int(price * self.coefficients['STOP'])
         stop_limit = int(price * self.coefficients['STOP_LIMIT'])
         params = {
-            "symbol": self.pair,  # Тикер токена
-            "isIsolated": True,
-            "side": "SELL",  # Продажа
-            "quantity": quantity,  # Количество монет
-            "price": sell_price,  # Заданная цена
-            "stopPrice": stop_price,  # Цена, при которой выставляется лимитная заявка на продажу по стопу
-            "stopLimitPrice": stop_limit,  # Цена, по которой продается монета по стопу
-            "sideEffectType": 'AUTO_REPAY',  # Автопогашение
-            "stopLimitTimeInForce": "GTC",
-            "recvWindow": RECVWINDOW,  # Необходимо для предотвращения ошибки 1021
+            'symbol': self.pair,
+            'isIsolated': True,
+            'side': 'SELL',
+            'quantity': quantity,
+            'price': sell_price,
+            # Цена, при которой выставляется лимитная заявка на продажу по стоп
+            'stopPrice': stop_price,
+            # Цена, по которой продается монета по стопу
+            'stopLimitPrice': stop_limit,
+            # Автопогашение
+            'sideEffectType': 'AUTO_REPAY',
+            'stopLimitTimeInForce': 'GTC',
+            # Необходимо для предотвращения ошибки 1021
+            'recvWindow': RECVWINDOW,
         }
-        response = self.client.new_margin_oco_order(**params)  # Открывает ордер на продажу со стопом
+        # Открывает ордер на продажу со стопом
+        response = self.client.new_margin_oco_order(**params)
         stop_order_id = str(response['orders'][0]['orderId'])
         limit_order_id = str(response['orders'][1]['orderId'])
         stop_order_info = self.client.margin_order(
@@ -192,7 +214,7 @@ class TraderSpotMargin(Trader):  # Класс для спотовой торго
             message = (f'{self.name}: Проверено состояние ордеров:'
                        f'{stop_order_info}, status: {stop_order_status},'
                        f'{limit_order_info}, status: {limit_order_status},')
-            #self.logger.debug(message)
+            # self.logger.debug(message)
         if stop_order_status == 'FILLED':
             order_info = stop_order_info
             message = f'{self.name}: Продано по стопу'
@@ -210,66 +232,86 @@ class TraderSpotMargin(Trader):  # Класс для спотовой торго
             self.send_message(message)
             timer = self.get_timer(param='STOP')
             time.sleep(timer)
-        message = (f'{self.name}: Продано {quantity} {self.token} на сумму '
-                   f'{order_info["cummulativeQuoteQty"]} {self.currency} по цене {order_info["price"]}')
+        message = (f'{self.name}: Продано {quantity} {self.token} '
+                   f'на сумму {order_info["cummulativeQuoteQty"]} '
+                   f'{self.currency} по цене {order_info["price"]}')
         self.logger.info(message)
         self.send_message(message)
         return order_info
 
     def check_level(self, cur_price):
         """Проверяет, находится ли цена в допустимом для входа диапазоне."""
-        data_24h = self.client.klines(self.pair, '1h', limit=24)  # В ответ на API-запрос получает свечи за период
-        #data_60m = self.client.klines(self.pair, '5m', limit=12)  # В ответ на API-запрос получает свечи за период
+        # В ответ на API-запрос получает свечи за период
+        data_24h = self.client.klines(self.pair, '1h', limit=24)
+        # В ответ на API-запрос получает свечи за период
+        # data_60m = self.client.klines(self.pair, '5m', limit=12)
         checks_box = []
-        check_first = self.check_global_level(cur_price, data_24h)  # True/False
+        check_first = self.check_global_level(cur_price, data_24h)
         checks_box.append(check_first)
-        check_second = self.check_admissible_volatility(cur_price, data_24h)  # True/False
+        check_second = self.check_admissible_volatility(cur_price, data_24h)
         checks_box.append(check_second)
-        #check_third = self.check_small_timeframe(cur_price, data_60m)  # True/False
-        #checks_box.append(check_third)
+        # check_third = self.check_small_timeframe(cur_price, data_60m)
+        # checks_box.append(check_third)
 
         for check in checks_box:
-            if not check:  # Если одна из проверок показала отрицательный результат
+            if not check:
                 self.logger.debug(f'{self.name}: Глобальная проверка: False')
-                return False  # Вход в сделку не допускается
+                # Вход в сделку не допускается
+                return False
         self.logger.debug(f'{self.name}: Глобальная проверка: True')
-        return True  # Вход в сделку допускается
+        # Вход в сделку допускается
+        return True
 
     def check_global_level(self, cur_price, data_24h):
-        """Проверяет, находится ли текущая цена в пределах глобальных уровней."""
-        intervals = LVL_C.keys()  # Содержит в себе нелинейные временные промежутки на таймфрейме
-        for dt in intervals:  # Для каждого из временных промежутков
+        """Проверяет, находится ли текущая цена
+        в пределах глобальных уровней.
+        """
+        intervals = LVL_C.keys()
+        for dt in intervals:
             highs = []
             lows = []
-            for data_hour in data_24h[LVL_C[dt]['st']:LVL_C[dt]['end']]:  # Для каждого часа из промежутка
-                highs.append(float(data_hour[2]))  # Добавляем наибольшее значение цены для часа в список
-                lows.append(float(data_hour[3]))  # Добавляем наименьшее значение цены для часа в список
-            width = max(highs) - min(lows)  # Находим длину коридора для временного промежутка
-            if (max(highs) - LVL_C[dt]['hc1'] * width < cur_price < max(highs) + LVL_C[dt]['hc2'] * width or
-                    min(lows) < cur_price < min(lows) + LVL_C[dt]['lc'] * width):  # Если цена в промежутке
-                self.logger.debug(f'{self.name}: Проверены уровни для входа: False. '
-                                  f'Проверку уровней не прошел промежуток: {dt}')
-                return False  # Если цена находится в пределах толщины одного из уровней
+            for data_hour in data_24h[LVL_C[dt]['st']:LVL_C[dt]['end']]:
+                highs.append(float(data_hour[2]))
+                lows.append(float(data_hour[3]))
+            width = max(highs) - min(lows)
+            if (max(highs) - LVL_C[dt]['hc1'] * width < cur_price <
+                    max(highs) + LVL_C[dt]['hc2'] * width or
+                    min(lows) < cur_price <
+                    min(lows) + LVL_C[dt]['lc'] * width):
+                self.logger.debug(f'{self.name}: Проверены уровни для '
+                                  f'входа: False. Проверку уровней не '
+                                  f'прошел промежуток: {dt}')
+                # Если цена находится в пределах одного из уровней
+                return False
         self.logger.debug(f'{self.name}: Проверены уровни для входа: True')
-        return True  # Если цена не находится в пределах толщины одного из уровней
+        # Если цена не находится в пределах одного из уровней
+        return True
 
     def check_admissible_volatility(self, cur_price, data_24h):
-        """Проверяет, находится ли текущая волатильность в пределах допустимой величины."""
-        intervals = VLT_C.keys()  # Содержит в себе нелинейные временные промежутки на таймфрейме
-        for dt in intervals:  # Для каждого из временных промежутков
+        """Проверяет, находится ли текущая волатильность
+        в пределах допустимой величины.
+        """
+        intervals = VLT_C.keys()
+        for dt in intervals:
             highs = []
             lows = []
-            for data_hour in data_24h[VLT_C[dt]['st']:VLT_C[dt]['end']]:  # Для каждого часа из промежутка
-                highs.append(float(data_hour[2]))  # Добавляем наибольшее значение цены для часа в список
-                lows.append(float(data_hour[3]))  # Добавляем наименьшее значение цены для часа в список
-            width = max(highs) - min(lows)  # Находим длину коридора для временного промежутка
-            if width < VLT_C[dt]['lvc'] * cur_price or width > VLT_C[dt]['hvc'] * cur_price:
-                self.logger.debug(f'{self.name}: Проверена волатильность: False. '
-                                  f'Проверку волатильности не прошел промежуток: {dt}')
-                return False  # Если волатильность не находится в пределах допустимой величины
+            for data_hour in data_24h[VLT_C[dt]['st']:VLT_C[dt]['end']]:
+                highs.append(float(data_hour[2]))
+                lows.append(float(data_hour[3]))
+            width = max(highs) - min(lows)
+            if (width < VLT_C[dt]['lvc'] * cur_price or
+                    width > VLT_C[dt]['hvc'] * cur_price):
+                self.logger.debug(f'{self.name}: Проверена волатильность: '
+                                  f'False. Проверку волатильности не прошел '
+                                  f'промежуток: {dt}')
+                # Если волатильность не находится в пределах допустимой
+                return False
         self.logger.debug(f'{self.name}: Проверена волатильность: True')
-        return True  # Если волатильность находится в пределах допустимой величины
+        # Если волатильность находится в пределах допустимой
+        return True
 
     def check_small_timeframe(self, cur_price, data_60m):
-        """Проверяет, не находится ли текущая цена в зоне перекупленности на малом таймфрейме."""
+        """Проверяет, не находится ли текущая цена
+        в зоне перекупленности на малом таймфрейме.
+        """
         return True
