@@ -28,7 +28,8 @@ def main(bot):
                 message = (f'{bot.name}: Сделка закрыта, заработок: '
                            f'{profit} {bot.currency} '
                            f'Текущий депозит (ориентировочно): '
-                           f'{sell_info["cummulativeQuoteQty"]} {bot.currency}')
+                           f'{sell_info["cummulativeQuoteQty"]} '
+                           f'{bot.currency}')
                 cur_depo = sell_info['cummulativeQuoteQty']
                 bot.logger.info(message)
                 bot.send_message(message)
