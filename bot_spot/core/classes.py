@@ -121,18 +121,26 @@ class TraderSpot(Trader):
         stop_order_id = str((response['orders'][0]['orderId']))
         limit_order_id = str((response['orders'][1]['orderId']))
         stop_order_info = self.client.get_order(
-            symbol=self.pair, orderId=stop_order_id, recvWindow=RECVWINDOW)
+            symbol=self.pair,
+            orderId=stop_order_id,
+            recvWindow=RECVWINDOW)
         limit_order_info = self.client.get_order(
-            symbol=self.pair, orderId=limit_order_id, recvWindow=RECVWINDOW)
+            symbol=self.pair,
+            orderId=limit_order_id,
+            recvWindow=RECVWINDOW)
         stop_order_status = stop_order_info['status']
         limit_order_status = limit_order_info['status']
         while stop_order_status != 'FILLED' and limit_order_status != 'FILLED':
             timer = self.get_timer(param='CHECK_T')
             time.sleep(timer)
             stop_order_info = self.client.get_order(
-                self.pair, orderId=stop_order_id, recvWindow=RECVWINDOW)
+                self.pair,
+                orderId=stop_order_id,
+                recvWindow=RECVWINDOW)
             limit_order_info = self.client.get_order(
-                self.pair, orderId=limit_order_id, recvWindow=RECVWINDOW)
+                self.pair,
+                orderId=limit_order_id,
+                recvWindow=RECVWINDOW)
             stop_order_status = stop_order_info['status']
             limit_order_status = limit_order_info['status']
             message = (f'{self.name}: Проверено состояние ордеров:'
@@ -311,18 +319,26 @@ class TraderSpotOld(Trader):
         stop_order_id = str((response['orders'][0]['orderId']))
         limit_order_id = str((response['orders'][1]['orderId']))
         stop_order_info = self.client.get_order(
-            symbol=self.pair, orderId=stop_order_id, recvWindow=RECVWINDOW)
+            symbol=self.pair,
+            orderId=stop_order_id,
+            recvWindow=RECVWINDOW)
         limit_order_info = self.client.get_order(
-            symbol=self.pair, orderId=limit_order_id, recvWindow=RECVWINDOW)
+            symbol=self.pair,
+            orderId=limit_order_id,
+            recvWindow=RECVWINDOW)
         stop_order_status = stop_order_info['status']
         limit_order_status = limit_order_info['status']
         while stop_order_status != 'FILLED' and limit_order_status != 'FILLED':
             timer = self.get_timer(param='CHECK_T')
             time.sleep(timer)
             stop_order_info = self.client.get_order(
-                self.pair, orderId=stop_order_id, recvWindow=RECVWINDOW)
+                self.pair,
+                orderId=stop_order_id,
+                recvWindow=RECVWINDOW)
             limit_order_info = self.client.get_order(
-                self.pair, orderId=limit_order_id, recvWindow=RECVWINDOW)
+                self.pair,
+                orderId=limit_order_id,
+                recvWindow=RECVWINDOW)
             stop_order_status = stop_order_info['status']
             limit_order_status = limit_order_info['status']
             message = (f'{self.name}: Проверено состояние ордеров:'
