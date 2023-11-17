@@ -8,7 +8,9 @@ TRADER_NAME = 'bot_spot_margin'
 TOKEN_NAME = 'BTC'
 CURRENCY = 'TUSD'
 
-COEF = {'MARGIN_RATIO': 0.1,  # 0.1: Режим для тестирования. 1:Обычный режим. 1-5:Плечо от 1 до 5.
+# MARGIN_RATIO - плечо для сделки.
+# 0.1: Режим для тестирования. 1: Обычный режим. 1-5: Плечо от 1 до 5.
+COEF = {'MARGIN_RATIO': 0.1,
         'INLET': 2,
         'OUTLET': 1.0005,
         'STOP': 0.985,
@@ -17,6 +19,10 @@ COEF = {'MARGIN_RATIO': 0.1,  # 0.1: Режим для тестирования.
 
 load_dotenv()  # Загружает секретные ключи
 
-BINANCE_TOKEN_S = os.getenv('BINANCE_TOKEN_SECOND')  # Токен для API-binance
-BINANCE_KEY_S = os.getenv('BINANCE_SECRET_KEY_SECOND')  # Ключ для API-binance
-CLIENT_BINANCE_S = Spot(api_key=BINANCE_TOKEN_S, api_secret=BINANCE_KEY_S)  # Регистрация клиента для API-binance
+# Токен для API-binance
+BINANCE_TOKEN_S = os.getenv('BINANCE_TOKEN_SECOND')
+# Ключ для API-binance
+BINANCE_KEY_S = os.getenv('BINANCE_SECRET_KEY_SECOND')
+
+# Регистрация клиента для API-binance
+CLIENT_BINANCE_S = Spot(api_key=BINANCE_TOKEN_S, api_secret=BINANCE_KEY_S)
